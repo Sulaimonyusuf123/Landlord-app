@@ -40,9 +40,9 @@ const Navbar = ({ closeNav }) => {
         <Text style={styles.navText}>Dashboard</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push("/(tabs)/properties")} style={styles.navItem}>
+      <TouchableOpacity onPress={() => router.push("/(tabs)/tenant")} style={styles.navItem}>
         <Ionicons name="home" size={20} color="teal" />
-        <Text style={styles.navText}>Properties</Text>
+        <Text style={styles.navText}>Tenants</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push("/(tabs)/transaction")} style={styles.navItem}>

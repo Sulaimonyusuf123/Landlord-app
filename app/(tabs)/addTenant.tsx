@@ -1,18 +1,41 @@
 import React, { useState } from "react";
-import { View, ScrollView, Image, StyleSheet, TouchableOpacity } from "react-native";
-import { TextInput, Button, Text } from "react-native-paper"; 
+import { View, ScrollView, Image, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import { TextInput, Button, Text, ActivityIndicator, Snackbar } from "react-native-paper"; 
 import { useForm, Controller } from "react-hook-form";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { addTenant } from "../../lib/appwrite"; // Update this path to match your project structure
 
 const AddTenant = () => {
-  const { control, handleSubmit, reset } = useForm();
+  const { control, handleSubmit, reset, formState: { errors } } = useForm();
   const [image, setImage] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
   const router = useRouter();
 
-  const onSubmit = (data) => {
-    console.log("Tenant Data:", { ...data, image });
+  const onSubmit = async (data) => {
+    try {
+      setLoading(true);
+      // Call the addTenant function from your API
+      const result = await addTenant(data, image);
+      console.log("Tenant added successfully:", result);
+      
+      // Show success message with Snackbar
+      setSnackbarMessage("Tenant added successfully!");
+      setSnackbarVisible(true);
+      
+      // Reset form and image
+      reset();
+      setImage(null);
+      
+    } catch (error) {
+      console.error("Failed to add tenant:", error);
+      Alert.alert("Error", "Failed to add tenant. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const pickImage = async () => {
@@ -44,28 +67,59 @@ const AddTenant = () => {
           control={control}
           name="name"
           defaultValue=""
+          rules={{ required: "Name is required" }}
           render={({ field: { onChange, value } }) => (
-            <TextInput label="Name" value={value} onChangeText={onChange} style={styles.input} />
+            <TextInput 
+              label="Name" 
+              value={value} 
+              onChangeText={onChange} 
+              style={styles.input}
+              error={errors.name}
+            />
           )}
         />
+        {errors.name && <Text style={styles.errorText}>{errors.name.message}</Text>}
 
         <Controller
           control={control}
           name="email"
           defaultValue=""
+          rules={{ 
+            required: "Email is required",
+            pattern: {
+              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+              message: "Invalid email address"
+            }
+          }}
           render={({ field: { onChange, value } }) => (
-            <TextInput label="Email" value={value} onChangeText={onChange} style={styles.input} />
+            <TextInput 
+              label="Email" 
+              value={value} 
+              onChangeText={onChange} 
+              style={styles.input}
+              error={errors.email}
+            />
           )}
         />
+        {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
 
         <Controller
           control={control}
           name="phone"
           defaultValue=""
+          rules={{ required: "Phone number is required" }}
           render={({ field: { onChange, value } }) => (
-            <TextInput label="Phone" value={value} onChangeText={onChange} style={styles.input} keyboardType="phone-pad" />
+            <TextInput 
+              label="Phone" 
+              value={value} 
+              onChangeText={onChange} 
+              style={styles.input} 
+              keyboardType="phone-pad"
+              error={errors.phone}
+            />
           )}
         />
+        {errors.phone && <Text style={styles.errorText}>{errors.phone.message}</Text>}
 
         <Controller
           control={control}
@@ -91,9 +145,32 @@ const AddTenant = () => {
         </TouchableOpacity>
 
         {/* Submit Button */}
-        <Button mode="contained" onPress={handleSubmit(onSubmit)} style={styles.button}>
-          Submit
+        <Button 
+          mode="contained" 
+          onPress={handleSubmit(onSubmit)} 
+          style={styles.button}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator animating={true} color="white" />
+          ) : (
+            "Submit"
+          )}
         </Button>
+        
+        {/* Success Snackbar */}
+        <Snackbar
+          visible={snackbarVisible}
+          onDismiss={() => setSnackbarVisible(false)}
+          duration={3000}
+          style={styles.snackbar}
+          action={{
+            label: 'OK',
+            onPress: () => setSnackbarVisible(false),
+          }}
+        >
+          {snackbarMessage}
+        </Snackbar>
       </View>
     </ScrollView>
   );
@@ -125,8 +202,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   input: {
-    marginBottom: 15,
+    marginBottom: 5,
     backgroundColor: "#dff8eb",
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginBottom: 10,
+    marginLeft: 5,
   },
   imagePicker: {
     borderWidth: 1,
@@ -146,6 +229,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     backgroundColor: '#009688',
   },
+  snackbar: {
+    backgroundColor: '#4CAF50',
+    position: 'absolute',
+    bottom: 10,
+    left: 20,
+    right: 20,
+  },
 });
-
-

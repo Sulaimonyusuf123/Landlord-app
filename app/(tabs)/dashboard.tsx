@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text,  StyleSheet,   ScrollView, TouchableOpacity, Alert, ActivityIndicator, Modal } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
-import Navbar from "../(tabs)/navbar"; // Adjust path if needed
-import { getCurrentUser, logoutUser } from "../../lib/appwrite";
+import { useRouter, useFocusEffect } from "expo-router";
+import { useCallback } from 'react';
+import Navbar from "../(tabs)/navbar";
+import { getCurrentUser, logoutUser, getProperties, deleteProperty, getTenants } from "../../lib/appwrite";
 
 const Dashboard = () => {
   const router = useRouter();
@@ -12,6 +13,14 @@ const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [properties, setProperties] = useState([]);
+  const [propertiesLoading, setPropertiesLoading] = useState(false);
+  const [selectedPropertyId, setSelectedPropertyId] = useState(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  // Add new state for tenant count
+  const [tenantCount, setTenantCount] = useState(0);
+  const [tenantsLoading, setTenantsLoading] = useState(false);
 
   // Fetch current user on component mount
   useEffect(() => {
@@ -29,6 +38,41 @@ const Dashboard = () => {
     fetchUser();
   }, []);
 
+  // Fetch properties and tenants when dashboard comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      const fetchData = async () => {
+        try {
+          setPropertiesLoading(true);
+          setTenantsLoading(true);
+          
+          // Fetch properties
+          const propertyData = await getProperties();
+          setProperties(propertyData);
+          
+          // Fetch tenants to get the count
+          const tenantData = await getTenants();
+          setTenantCount(tenantData.length);
+          
+        } catch (error) {
+          console.error("Error fetching data:", error);
+          Alert.alert("Error", "Failed to load dashboard data");
+        } finally {
+          setPropertiesLoading(false);
+          setTenantsLoading(false);
+        }
+      };
+
+      if (user) {
+        fetchData();
+      }
+      
+      return () => {
+        // Clean up if needed
+      };
+    }, [user])
+  );
+
   // Handle logout
   const handleLogout = async () => {
     try {
@@ -43,19 +87,104 @@ const Dashboard = () => {
     }
   };
 
-  // Define closeNav as a proper function reference
   const closeNav = () => {
-    console.log("closeNav called in Dashboard"); // For debugging
     setNavVisible(false);
   };
 
-  // Function to toggle navbar visibility
   const toggleNav = () => {
-    console.log("Toggle navbar, current state:", navVisible);
     setNavVisible(!navVisible);
   };
 
-  // Define your image assets using Expo's asset system
+  // Handle opening the menu for a specific property
+  const handleOpenMenu = (propertyId) => {
+    console.log("Opening menu for property:", propertyId);
+    console.log("Property ID type:", typeof propertyId);
+    // Always convert to string for consistency
+    setSelectedPropertyId(String(propertyId));
+    setMenuVisible(true);
+  };
+
+  // Handle delete property
+  const handleDeleteProperty = () => {
+    console.log("handleDeleteProperty called with ID:", selectedPropertyId);
+    
+    if (!selectedPropertyId) {
+      console.error("No property ID selected for deletion");
+      return;
+    }
+  
+    Alert.alert(
+      "Delete Property",
+      "Are you sure you want to delete this property? This action cannot be undone.",
+      [
+        { 
+          text: "Cancel", 
+          style: "cancel", 
+          onPress: () => {
+            console.log("Delete cancelled");
+            setMenuVisible(false);
+          }
+        },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: () => {
+            console.log("Delete confirmed for ID:", selectedPropertyId);
+            // Call deleteProperty directly to avoid issues with the confirmDelete function
+            handleConfirmedDelete(selectedPropertyId);
+          }
+        }
+      ]
+    );
+  };
+  
+  // Separate function to handle the confirmed deletion
+  const handleConfirmedDelete = async (idToDelete) => {
+    console.log("Starting deletion process for ID:", idToDelete);
+    
+    try {
+      setDeleteLoading(true);
+      setMenuVisible(false);
+      
+      // Convert ID to string explicitly
+      const stringId = String(idToDelete);
+      console.log("Stringified ID for deletion:", stringId);
+      
+      // Call the deleteProperty function directly
+      await deleteProperty(stringId);
+      console.log("Property deleted successfully on server");
+      
+      // Update the UI after successful deletion
+      setProperties(prevProperties => 
+        prevProperties.filter(property => String(property.id) !== stringId)
+      );
+      
+      Alert.alert("Success", "Property deleted successfully");
+    } catch (error) {
+      console.error("Delete property error details:", error);
+      
+      // Show a more detailed error message
+      let errorMessage = "Failed to delete property";
+      if (error.message) {
+        errorMessage += `: ${error.message}`;
+      }
+      
+      Alert.alert("Error", errorMessage);
+      
+      // Try to refresh the properties list if deletion failed
+      try {
+        console.log("Attempting to refresh properties after error");
+        const updatedProperties = await getProperties();
+        setProperties(updatedProperties);
+      } catch (refreshError) {
+        console.error("Error refreshing properties:", refreshError);
+      }
+    } finally {
+      setDeleteLoading(false);
+      setSelectedPropertyId(null);
+    }
+  };
+
   const images = {
     addNew: require("../../assets/images/addnew.png"),
     payReport: require("../../assets/images/payreport.png"),
@@ -63,7 +192,7 @@ const Dashboard = () => {
     building: require("../../assets/images/build.png"),
   };
 
-  // Show loading state while checking authentication
+  // Rest of your render logic remains the same
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -73,10 +202,7 @@ const Dashboard = () => {
     );
   }
 
-  // Redirect to login if no user is found
   if (!user) {
-    // Instead of immediately redirecting, we can show a message
-    // and provide a button to go to the login screen
     return (
       <View style={styles.authErrorContainer}>
         <Text style={styles.authErrorText}>
@@ -94,8 +220,15 @@ const Dashboard = () => {
 
   return (
     <View style={styles.mainContainer}>
-      {/* Render Navbar as an overlay when visible */}
       {navVisible && <Navbar closeNav={closeNav} />}
+
+      {/* Delete loading overlay */}
+      {deleteLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#17b8a6" />
+          <Text style={styles.loadingText}>Deleting property...</Text>
+        </View>
+      )}
 
       <ScrollView style={styles.container}>
         {/* Header */}
@@ -108,10 +241,8 @@ const Dashboard = () => {
             <TouchableOpacity onPress={() => router.replace("/(tabs)/notification")} style={styles.headerIcon}>
               <Ionicons name="notifications-outline" size={24} color="white" />
             </TouchableOpacity>
-           
           </View>
         </View>
-
        
         <View style={styles.welcomeContainer}>
           <Text style={styles.welcomeText}>Hi {user.name || "User"}</Text>
@@ -138,11 +269,15 @@ const Dashboard = () => {
         <View style={styles.summaryContainer}>
           <View style={styles.summaryCard}>
             <Text>Total Property</Text>
-            <Text style={styles.count}>10</Text>
+            <Text style={styles.count}>{properties?.length || 0}</Text>
           </View>
           <View style={styles.summaryCard}>
             <Text>Total Tenants</Text>
-            <Text style={styles.count}>21</Text>
+            {tenantsLoading ? (
+              <ActivityIndicator size="small" color="#17b8a6" />
+            ) : (
+              <Text style={styles.count}>{tenantCount}</Text>
+            )}
           </View>
           <View style={styles.summaryCard}>
             <Text>Vacant Units</Text>
@@ -152,55 +287,91 @@ const Dashboard = () => {
 
         {/* Property List */}
         <Text style={styles.sectionTitle}>Properties</Text>
-        <View style={styles.propertyCard}>
-          <Image source={images.building} style={styles.propertyImage} contentFit="contain" />
-          <View style={styles.propertyInfo}>
-            <Text style={styles.propertyTitle}>3 Bedroom Flat</Text>
-            <Text style={styles.propertyDetails}>🏡 Rent • 🔴 Residential</Text>
+        
+        {propertiesLoading ? (
+          <View style={styles.loadingProperties}>
+            <ActivityIndicator size="small" color="#17b8a6" />
+            <Text style={styles.loadingText}>Loading properties...</Text>
           </View>
-          <View>
-            <Ionicons name="ellipsis-vertical" size={20} color="black" />
+        ) : properties.length === 0 ? (
+          <View style={styles.noProperties}>
+            <Text style={styles.noPropertiesText}>No properties added yet</Text>
+            <TouchableOpacity 
+              style={styles.addPropertyButton}
+              onPress={() => router.replace("/(tabs)/addProperties")}
+            >
+              <Text style={styles.addPropertyButtonText}>Add Your First Property</Text>
+            </TouchableOpacity>
           </View>
-        </View>
-
-        <View style={styles.propertyCard}>
-          <Image source={images.building} style={styles.propertyImage} contentFit="contain" />
-          <View style={styles.propertyInfo}>
-            <Text style={styles.propertyTitle}>4 Bedroom Flat</Text>
-            <Text style={styles.propertyDetails}>🏡 Rent • 🔴 Residential</Text>
-          </View>
-          <View>
-            <Ionicons name="ellipsis-vertical" size={20} color="black" />
-          </View>
-        </View>
-
-        <View style={styles.propertyCard}>
-          <Image source={images.building} style={styles.propertyImage} contentFit="contain" />
-          <View style={styles.propertyInfo}>
-            <Text style={styles.propertyTitle}>2 Bedroom Flat</Text>
-            <Text style={styles.propertyDetails}>🏡 Rent • 🔴 Residential</Text>
-          </View>
-          <View>
-            <Ionicons name="ellipsis-vertical" size={20} color="black" />
-          </View>
-        </View>
-
-        <View style={styles.propertyCard}>
-          <Image source={images.building} style={styles.propertyImage} contentFit="contain" />
-          <View style={styles.propertyInfo}>
-            <Text style={styles.propertyTitle}>3 Bedroom Flat</Text>
-            <Text style={styles.propertyDetails}>🏡 Rent • 🔴 Residential</Text>
-          </View>
-          <View>
-            <Ionicons name="ellipsis-vertical" size={20} color="black" />
-          </View>
-        </View>
+        ) : (
+          // Map through properties
+          properties.map((property, index) => (
+            <View key={property.id || index} style={styles.propertyCard}>
+              <Image 
+                source={property.imageUrl ? { uri: property.imageUrl } : images.building} 
+                style={styles.propertyImage} 
+                contentFit="contain" 
+              />
+              <View style={styles.propertyInfo}>
+                <Text style={styles.propertyTitle}>{property.propertyName || "Unnamed Property"}</Text>
+                <Text style={styles.propertyDetails}>
+                  🏡 {property.propertyType || "N/A"} • 🔴 {property.category || "Uncategorized"}
+                </Text>
+              </View>
+              <TouchableOpacity 
+                onPress={() => handleOpenMenu(property.id)}
+                style={styles.menuButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="ellipsis-vertical" size={24} color="black" />
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
       </ScrollView>
+
+      {/* Action menu modal */}
+      <Modal
+        transparent={true}
+        animationType="fade"
+        visible={menuVisible}
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1}
+          onPress={() => setMenuVisible(false)}
+        >
+          <View style={styles.menuContainer}>
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => {
+                console.log("Delete button pressed for property:", selectedPropertyId);
+                handleDeleteProperty();
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="trash-outline" size={24} color="#ff4d4d" />
+              <Text style={styles.deleteText}>Delete Property</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => setMenuVisible(false)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close-outline" size={24} color="#666" />
+              <Text style={styles.menuText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
 
-// Updated styles to include mainContainer and auth-related styles
+
+// Your existing styles remain the same
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
@@ -220,6 +391,44 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: "#666",
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  loadingProperties: {
+    padding: 20,
+    alignItems: "center",
+  },
+  noProperties: {
+    padding: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f5f5f5",
+    margin: 15,
+    borderRadius: 10,
+  },
+  noPropertiesText: {
+    fontSize: 16,
+    color: "#666",
+    marginBottom: 15,
+  },
+  addPropertyButton: {
+    backgroundColor: "#17b8a6",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  addPropertyButtonText: {
+    color: "white",
+    fontWeight: "bold",
   },
   authErrorContainer: {
     flex: 1,
@@ -334,7 +543,8 @@ const styles = StyleSheet.create({
   propertyImage: { 
     width: 40, 
     height: 40, 
-    marginRight: 10
+    marginRight: 10,
+    borderRadius: 5
   },
   propertyInfo: { 
     flex: 1 
@@ -347,6 +557,47 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     color: "gray" 
   },
+  menuButton: {
+    padding: 10,
+    marginLeft: 5,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuContainer: {
+    width: '80%',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  deleteText: {
+    marginLeft: 10,
+    color: '#ff4d4d',
+    fontWeight: '500',
+    fontSize: 16,
+  },
+  menuText: {
+    marginLeft: 10,
+    color: '#666',
+    fontWeight: '500',
+    fontSize: 16,
+  }
 });
 
 export default Dashboard;
