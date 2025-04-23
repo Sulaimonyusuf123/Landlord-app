@@ -26,7 +26,7 @@ const RegisterScreen = () => {
     setErrorMessage("");
     setSuccessMessage("");
 
-    // Basic validation
+    
     if (!email) {
       setErrorMessage("Please enter an email address.");
       return;
@@ -73,13 +73,13 @@ const RegisterScreen = () => {
       if (verification) {
         setSuccessMessage("Verification link sent! Please check your email to verify your account.");
         console.log("Verification sent successfully:", { user, verification });
-        setTimeout(() => router.replace("/(auth)/login"), 3000); // Optional: redirect after 3s
+        setTimeout(() => router.replace("/(auth)/login"), 3000); 
       } else {
         setSuccessMessage(
           "Account created, but we couldn’t send the verification email. Please try logging in to request a new one."
         );
         console.log("Verification failed, but user created:", { user });
-        setTimeout(() => router.replace("/(auth)/login"), 3000); // Optional: redirect after 3s
+        setTimeout(() => router.replace("/(auth)/login"), 3000); 
       }
     } catch (error) {
       console.error("Registration error (FULL):", JSON.stringify(error, null, 2));

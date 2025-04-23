@@ -11,7 +11,7 @@ import {
   ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { loginUser, resendVerification } from "../../lib/appwrite";
+import { loginUser, resendVerification, isEmailVerified, logoutUser } from "../../lib/appwrite";
 
 const LoginScreen = () => {
   const router = useRouter();
@@ -40,11 +40,36 @@ const LoginScreen = () => {
       const response = await loginUser({ email: email.trim(), password });
       console.log("loginUser response:", response);
       const { user, session } = response || {};
-      console.log("Login successful:", { user, session });
+      
+     
+      console.log("Checking if email is verified...");
+      const verified = await isEmailVerified();
+      console.log("Email verification status:", verified);
+      
+      if (!verified) {
+      
+        console.log("Email not verified, showing verification prompt");
+        setErrorMessage("Your email address has not been verified. Please check your inbox for the verification email we sent when you registered.");
+        setShowResendButton(true);
+        
+       
+        try {
+          await logoutUser();
+          console.log("Logged out unverified user");
+        } catch (logoutError) {
+          console.error("Error logging out unverified user:", logoutError);
+        }
+        
+        setIsLoading(false);
+        return;
+      }
+      
+      
+      console.log("Login successful with verified email:", { user, session });
       console.log("Navigating to /(tabs)/dashboard...");
       router.replace("/(tabs)/dashboard");
       console.log("Navigation triggered");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Login error caught in LoginScreen:", {
         code: error.code,
         message: error.message,
@@ -56,7 +81,7 @@ const LoginScreen = () => {
         if (error.type === "user_session_already_exists") {
           setErrorMessage("A session is already active. Please try again.");
         } else if (error.message.toLowerCase().includes("email not verified")) {
-          setErrorMessage("Please verify your email before logging in.");
+          setErrorMessage("Your email address has not been verified. Please check your inbox for the verification email.");
           setShowResendButton(true);
         } else {
           setErrorMessage("Invalid email or password.");
@@ -77,8 +102,12 @@ const LoginScreen = () => {
       setIsResending(true);
       console.log("Attempting to resend verification...");
       await resendVerification();
-      Alert.alert("Verification Email Sent", "Please check your email for the verification link.");
-    } catch (error: any) {
+      Alert.alert(
+        "Verification Email Sent", 
+        "We've sent a new verification email to your address. Please check your inbox and click the verification link to activate your account.",
+        [{ text: "OK" }]
+      );
+    } catch (error) {
       console.error("Resend verification error in LoginScreen:", {
         code: error.code,
         message: error.message,
@@ -182,6 +211,7 @@ const LoginScreen = () => {
 };
 
 const styles = StyleSheet.create({
+
   scrollContainer: {
     flexGrow: 1,
   },
