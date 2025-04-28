@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
+
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -27,15 +28,13 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack initialRouteName="index">
-        <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack initialRouteName="(auth)">
+        {/* Groups (nested layouts handle their own screens) */}
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} /> {/* Updated */}
-        <Stack.Screen name="bill-payment" options={{ title: 'Bill Payment' }} />
-        <Stack.Screen name="receipt" options={{ title: 'Payment Receipt' }} />
-        <Stack.Screen name="(auth)/signup" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)/login" options={{ headerShown: false }}  />
-        <Stack.Screen name="(auth)/verify" options={{ headerShown: false }}  />
+        
+        {/* Standalone screens (outside groups) */}
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />

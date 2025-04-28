@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, ScrollView, StyleSheet, TouchableOpacity, Alert, Image } from "react-native";
-import { TextInput, Button, Text, ActivityIndicator, Snackbar } from "react-native-paper";
+import { TextInput, Button, Text, ActivityIndicator, Snackbar } from "react-native-paper"; 
 import { useForm, Controller } from "react-hook-form";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { saveTenantToMock } from "../../lib/mockData";
+import { getTenantById, updateTenantInMock } from "../../lib/mockData";
 
 interface TenantFormData {
   name: string;
@@ -15,15 +15,34 @@ interface TenantFormData {
   city?: string;
 }
 
-const AddTenant = () => {
+const EditTenant = () => {
   const router = useRouter();
-  const { propertyId, unitId } = useLocalSearchParams<{ propertyId: string, unitId: string }>();
+  const { tenantId } = useLocalSearchParams<{ tenantId: string }>();
 
-  const { control, handleSubmit, reset, formState: { errors } } = useForm<TenantFormData>();
+  const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm<TenantFormData>();
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+
+  useEffect(() => {
+    const loadTenant = async () => {
+      try {
+        const tenant = await getTenantById(tenantId!);
+        if (tenant) {
+          setValue("name", tenant.name);
+          setValue("email", tenant.email);
+          setValue("phone", tenant.phone);
+          setValue("state", tenant.state || '');
+          setValue("city", tenant.city || '');
+          setImage(tenant.imageUrl || null);
+        }
+      } catch (error) {
+        console.error("Error loading tenant:", error);
+      }
+    };
+    if (tenantId) loadTenant();
+  }, [tenantId]);
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -39,38 +58,24 @@ const AddTenant = () => {
   };
 
   const onSubmit = async (data: TenantFormData) => {
-    if (!propertyId || !unitId) {
-      Alert.alert("Error", "Missing property or unit information.");
-      return;
-    }
-
     try {
       setLoading(true);
 
-      const tenant = {
-        id: Date.now().toString(),
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        state: data.state || '',
-        city: data.city || '',
+      await updateTenantInMock(tenantId!, {
+        ...data,
         imageUrl: image || undefined,
-      };
+      });
 
-      await saveTenantToMock(propertyId, unitId, tenant);
-
-      setSnackbarMessage("Tenant added and linked successfully!");
+      setSnackbarMessage("Tenant updated successfully!");
       setSnackbarVisible(true);
-      reset();
-      setImage(null);
 
       setTimeout(() => {
         router.replace("/(tabs)/properties");
       }, 1000);
 
     } catch (error) {
-      console.error("Failed to add tenant:", error);
-      Alert.alert("Error", "Failed to add tenant. Please try again.");
+      console.error("Failed to update tenant:", error);
+      Alert.alert("Error", "Failed to update tenant. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -83,32 +88,30 @@ const AddTenant = () => {
           <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 10 }}>
             <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
-          <Text style={styles.headerText}>Add Tenant</Text>
+          <Text style={styles.headerText}>Edit Tenant</Text>
           <View style={{ width: 24 }} />
         </View>
 
         <Controller
           control={control}
           name="name"
-          defaultValue=""
           rules={{ required: "Name is required" }}
           render={({ field: { onChange, value } }) => (
-            <TextInput
-              label="Name"
-              value={value}
-              onChangeText={onChange}
+            <TextInput 
+              label="Name" 
+              value={value} 
+              onChangeText={onChange} 
               style={styles.input}
               error={!!errors.name}
             />
           )}
         />
-        {errors.name && <Text style={styles.errorText}>{errors.name.message}</Text>}
+        {errors.name?.message && <Text style={styles.errorText}>{errors.name.message}</Text>}
 
         <Controller
           control={control}
           name="email"
-          defaultValue=""
-          rules={{
+          rules={{ 
             required: "Email is required",
             pattern: {
               value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -116,39 +119,37 @@ const AddTenant = () => {
             }
           }}
           render={({ field: { onChange, value } }) => (
-            <TextInput
-              label="Email"
-              value={value}
-              onChangeText={onChange}
+            <TextInput 
+              label="Email" 
+              value={value} 
+              onChangeText={onChange} 
               style={styles.input}
               error={!!errors.email}
             />
           )}
         />
-        {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
+        {errors.email?.message && <Text style={styles.errorText}>{errors.email.message}</Text>}
 
         <Controller
           control={control}
           name="phone"
-          defaultValue=""
           rules={{ required: "Phone number is required" }}
           render={({ field: { onChange, value } }) => (
-            <TextInput
-              label="Phone"
-              value={value}
-              onChangeText={onChange}
-              style={styles.input}
+            <TextInput 
+              label="Phone" 
+              value={value} 
+              onChangeText={onChange} 
+              style={styles.input} 
               keyboardType="phone-pad"
               error={!!errors.phone}
             />
           )}
         />
-        {errors.phone && <Text style={styles.errorText}>{errors.phone.message}</Text>}
+        {errors.phone?.message && <Text style={styles.errorText}>{errors.phone.message}</Text>}
 
         <Controller
           control={control}
           name="state"
-          defaultValue=""
           render={({ field: { onChange, value } }) => (
             <TextInput label="State" value={value} onChangeText={onChange} style={styles.input} />
           )}
@@ -157,7 +158,6 @@ const AddTenant = () => {
         <Controller
           control={control}
           name="city"
-          defaultValue=""
           render={({ field: { onChange, value } }) => (
             <TextInput label="City" value={value} onChangeText={onChange} style={styles.input} />
           )}
@@ -167,16 +167,16 @@ const AddTenant = () => {
           {image ? <Image source={{ uri: image }} style={styles.image} /> : <Text>+ Upload Image</Text>}
         </TouchableOpacity>
 
-        <Button
-          mode="contained"
-          onPress={handleSubmit(onSubmit)}
+        <Button 
+          mode="contained" 
+          onPress={handleSubmit(onSubmit)} 
           style={styles.button}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator animating={true} color="white" />
           ) : (
-            "Submit"
+            "Update"
           )}
         </Button>
 
@@ -197,7 +197,7 @@ const AddTenant = () => {
   );
 };
 
-export default AddTenant;
+export default EditTenant;
 
 const styles = StyleSheet.create({
   scrollContainer: {

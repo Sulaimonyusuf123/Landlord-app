@@ -1,35 +1,32 @@
-// Navbar.js
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { logoutUser } from "../../lib/appwrite"; // Adjust path to your Appwrite config
+import { logoutUser } from "../../lib/appwrite";
 
-const Navbar = ({ closeNav }) => {
+interface NavbarProps {
+  closeNav: () => void;
+}
+
+const Navbar: React.FC<NavbarProps> = ({ closeNav }) => {
   const router = useRouter();
 
   const handleCloseButton = () => {
-    console.log("Close button pressed");
     closeNav();
   };
 
   const handleLogout = async () => {
     try {
       await logoutUser();
-      router.replace("/(auth)/login"); // Redirect to login page after logout
+      router.replace("/(auth)/login");
     } catch (error) {
       console.error("Failed to logout:", error);
-      // Optionally add user feedback here (e.g., an alert)
     }
   };
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
-        style={styles.closeButton}
-        activeOpacity={0.5}
-        onPress={handleCloseButton}
-      >
+      <TouchableOpacity style={styles.closeButton} activeOpacity={0.5} onPress={handleCloseButton}>
         <Ionicons name="close" size={30} color="black" />
       </TouchableOpacity>
 
@@ -40,34 +37,34 @@ const Navbar = ({ closeNav }) => {
         <Text style={styles.navText}>Dashboard</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push("/(tabs)/tenant")} style={styles.navItem}>
+      <TouchableOpacity onPress={() => router.push("/(tabs)/properties")} style={styles.navItem}>
         <Ionicons name="home" size={20} color="teal" />
+        <Text style={styles.navText}>Properties</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push("/(tabs)/payments")} style={styles.navItem}>
+        <Ionicons name="cash" size={20} color="teal" />
+        <Text style={styles.navText}>Payments</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push("/(tabs)/expenses")} style={styles.navItem}>
+        <Ionicons name="receipt" size={20} color="teal" />
+        <Text style={styles.navText}>Expenses</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push("/(tabs)/tenants")} style={styles.navItem}>
+        <Ionicons name="people" size={20} color="teal" />
         <Text style={styles.navText}>Tenants</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push("/(tabs)/transaction")} style={styles.navItem}>
-        <Ionicons name="swap-horizontal" size={20} color="teal" />
-        <Text style={styles.navText}>Transaction</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => router.push("/chat")} style={styles.navItem}>
-        <Ionicons name="chatbubble-ellipses" size={20} color="teal" />
-        <Text style={styles.navText}>Chat</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => router.push("/bill")} style={styles.navItem}>
-        <Ionicons name="document-text" size={20} color="teal" />
-        <Text style={styles.navText}>Bill Management</Text>
+      <TouchableOpacity onPress={() => router.push("/(tabs)/paymentReport")} style={styles.navItem}>
+        <Ionicons name="analytics" size={20} color="teal" />
+        <Text style={styles.navText}>Payment Report</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push("/(tabs)/profile")} style={styles.navItem}>
-        <Ionicons name="settings" size={20} color="teal" />
-        <Text style={styles.navText}>Profile Settings</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => router.push("/reciept")} style={styles.navItem}>
-        <Ionicons name="language" size={20} color="teal" />
-        <Text style={styles.navText}>Reciept</Text>
+        <Ionicons name="person" size={20} color="teal" />
+        <Text style={styles.navText}>Profile</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={handleLogout} style={styles.navItem}>
