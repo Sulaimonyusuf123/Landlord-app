@@ -2,40 +2,50 @@ import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { getAllProperties, deletePropertyFromMock } from "../../lib/mockData";
-import type { Property } from "../../lib/mockData";
+import { getAllProperties, deletePropertyFromMock } from "../../../lib/mockData";
+import type { Property } from "../../../lib/mockData";
 
 const Properties = () => {
   const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0); // لإجبار إعادة التحميل بعد الحذف
 
   useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+        setLoading(true);
+        const data = await getAllProperties();
+        setProperties(data);
+      } catch (error) {
+        console.error("Failed to load properties:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchProperties();
-  }, []);
+  }, [refreshKey]);
 
-  const fetchProperties = async () => {
-    try {
-      setLoading(true);
-      const data = await getAllProperties();
-      setProperties(data);
-    } catch (error) {
-      console.error("Failed to load properties:", error);
-    } finally {
-      setLoading(false);
+  const handleAddProperty = () => {
+    router.push("/(tabs)/properties/addProperty");
+  };
+
+  const handleViewProperty = (property: Property) => {
+    if (property.type === "building") {
+      router.push({
+        pathname: "/(tabs)/units/units",
+        params: { propertyId: property.id },
+      });
+    } else {
+      router.push({
+        pathname: "/(tabs)/properties/property-details",
+        params: { propertyId: property.id },
+      });
     }
   };
 
-  const handleAddProperty = () => {
-    router.push("/(tabs)/addProperty");
-  };
-
-  const handleViewProperty = (propertyId: string) => {
-    router.push({ pathname: "/(tabs)/property-details", params: { propertyId } });
-  };
-
   const handleEditProperty = (propertyId: string) => {
-    router.push({ pathname: "/(tabs)/editProperty", params: { propertyId } });
+    router.push({ pathname: "/(tabs)/properties/editProperty", params: { propertyId } });
   };
 
   const handleDeleteProperty = async (propertyId: string) => {
@@ -48,8 +58,14 @@ const Properties = () => {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            await deletePropertyFromMock(propertyId);
-            fetchProperties();
+            try {
+              await deletePropertyFromMock(propertyId);
+              setRefreshKey(prev => prev + 1); // تحديث المفتاح لإعادة التحميل
+              Alert.alert("Deleted", "Property has been deleted.");
+            } catch (error) {
+              console.error("Failed to delete property:", error);
+              Alert.alert("Error", "Failed to delete property.");
+            }
           },
         },
       ],
@@ -59,8 +75,10 @@ const Properties = () => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="white" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Properties</Text>
         <TouchableOpacity onPress={handleAddProperty}>
           <Ionicons name="add-circle-outline" size={28} color="white" />
@@ -72,19 +90,18 @@ const Properties = () => {
           <ActivityIndicator size="large" color="#17b8a6" />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.listContainer}>
+        <ScrollView contentContainerStyle={styles.listContainer} key={refreshKey}>
           {properties.length === 0 ? (
             <Text style={styles.noDataText}>No properties found.</Text>
           ) : (
             properties.map((property) => (
               <View key={property.id} style={styles.propertyCard}>
-                <Text style={styles.propertyName}>{property.name}</Text>
-                <Text style={styles.propertyType}>{property.type}</Text>
+                <TouchableOpacity onPress={() => handleViewProperty(property)} activeOpacity={0.8}>
+                  <Text style={styles.propertyName}>{property.name}</Text>
+                  <Text style={styles.propertyType}>{property.type}</Text>
+                </TouchableOpacity>
 
                 <View style={styles.buttonRow}>
-                  <TouchableOpacity onPress={() => handleViewProperty(property.id)} style={styles.button}>
-                    <Ionicons name="eye-outline" size={20} color="#17b8a6" />
-                  </TouchableOpacity>
                   <TouchableOpacity onPress={() => handleEditProperty(property.id)} style={styles.button}>
                     <Ionicons name="create-outline" size={20} color="#FFA500" />
                   </TouchableOpacity>
@@ -114,7 +131,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#17b8a6",
     padding: 15,
-    marginBottom: 10,
   },
   headerTitle: {
     fontSize: 18,

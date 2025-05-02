@@ -4,8 +4,8 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, ActivityIndicator, Image } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { getTenantById, deleteTenantFromMock } from "../../lib/mockData";
-import type { Tenant } from "../../lib/mockData";
+import { getTenantById, deleteTenantFromMock } from "../../../lib/mockData";
+import type { Tenant } from "../../../lib/mockData";
 
 const TenantDetails = () => {
   const router = useRouter();
@@ -29,7 +29,7 @@ const TenantDetails = () => {
   }, [tenantId]);
 
   const handleEditTenant = () => {
-    router.push(`/(tabs)/editTenant?tenantId=${tenantId}`);
+    router.push(`/(tabs)/tenants/editTenant?tenantId=${tenantId}`);
   };
 
   const handleDeleteTenant = async () => {
@@ -42,7 +42,7 @@ const TenantDetails = () => {
             try {
               await deleteTenantFromMock(tenantId!);
               Alert.alert("Deleted", "Tenant deleted successfully!");
-              router.replace("/(tabs)/tenants");
+              router.replace("/(tabs)/tenants/tenants");
             } catch (error) {
               console.error("Failed to delete tenant:", error);
               Alert.alert("Error", "Failed to delete tenant.");

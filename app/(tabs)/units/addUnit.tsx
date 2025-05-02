@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { addUnitToProperty } from '../../lib/mockData';
+import { addUnitToProperty } from '../../../lib/mockData';
 
 const AddUnit = () => {
   const router = useRouter();
@@ -29,18 +29,20 @@ const AddUnit = () => {
 
       for (let i = 0; i < numberOfUnits; i++) {
         await addUnitToProperty(propertyId!, {
-            id: Date.now().toString() + '-' + i,
-            propertyId: propertyId!,
-            size: Number(size),
-            bedrooms: Number(bedrooms),
-            rentAmount: Number(rentAmount),
-            status: 'vacant',
-            startDate: undefined,
-            tenantId: undefined,
-            payments: [],
-            floorNumber: Number(floorNumber),
-            notes: notes.trim() !== '' ? notes : undefined,
-          });
+          id: Date.now().toString() + '-' + i,
+          propertyId: propertyId!,
+          size: Number(size),
+          bedrooms: Number(bedrooms),
+          rentAmount: Number(rentAmount),
+          status: 'vacant',
+          startDate: undefined,
+          tenantId: undefined,
+          payments: [],
+          floorNumber: Number(floorNumber),
+          notes: notes.trim() !== '' ? notes : undefined,
+          bathrooms: 0,
+          unitNumber: ''
+        });
           
       }
 

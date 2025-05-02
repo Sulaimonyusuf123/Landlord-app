@@ -8,7 +8,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { savePropertyToMock } from "../../lib/mockData";
+import { savePropertyToMock } from "../../../lib/mockData";
 
 const PROPERTY_TYPES = ["Building", "Villa", "Commercial"];
 
@@ -63,7 +63,7 @@ const AddProperty = () => {
       setImage(undefined);
 
       setTimeout(() => {
-        router.replace("/(tabs)/dashboard");
+        router.replace("/(tabs)/properties/properties");
       }, 500);
     } catch (err) {
       Alert.alert("Error", "Failed to save property.");

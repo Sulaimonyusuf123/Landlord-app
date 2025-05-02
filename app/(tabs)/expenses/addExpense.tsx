@@ -4,8 +4,8 @@ import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { getAllProperties, saveExpenseToMock } from "../../lib/mockData";
-import type { Property, Unit } from "../../lib/mockData";
+import { getAllProperties, saveExpenseToMock } from "../../../lib/mockData";
+import type { Property, Unit } from "../../../lib/mockData";
 
 const EXPENSE_TYPES = [
   "Electricity Bill",

@@ -1,38 +1,63 @@
-// app/(tabs)/payments.tsx
-
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { getAllPayments } from "../../lib/mockData";
-import type { Payment } from "../../lib/mockData";
+import { getAllPayments, deletePaymentFromMock } from "../../../lib/mockData";
+import type { Payment } from "../../../lib/mockData";
 
 const Payments = () => {
   const router = useRouter();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const loadPayments = async () => {
+    try {
+      setLoading(true);
+      const data = await getAllPayments();
+      setPayments(data);
+    } catch (error) {
+      console.error("Failed to load payments:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchPayments = async () => {
-      try {
-        const data = await getAllPayments();
-        setPayments(data);
-      } catch (error) {
-        console.error("Failed to load payments:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchPayments();
+    loadPayments();
   }, []);
 
   const handleAddPayment = () => {
-    router.push("/(tabs)/addPayment");
+    router.push("/(tabs)/payments/addPayment");
+  };
+
+  const handleEdit = (id: string) => {
+    router.push({ pathname: "/(tabs)/payments/editPayment", params: { paymentId: id } });
+  };
+
+  const handleDelete = (id: string) => {
+    Alert.alert("Delete Payment", "Are you sure you want to delete this payment?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          await deletePaymentFromMock(id);
+          loadPayments();
+        },
+      },
+    ]);
+  };
+
+  const handleView = (id: string) => {
+    router.push({ pathname: "/(tabs)/payments/payment-details", params: { paymentId: id } });
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="white" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Payments</Text>
         <TouchableOpacity onPress={handleAddPayment}>
           <Ionicons name="add-circle-outline" size={28} color="white" />
@@ -49,16 +74,28 @@ const Payments = () => {
             <Text style={styles.noDataText}>No payments recorded yet.</Text>
           ) : (
             payments.map((payment) => (
-              <View key={payment.id} style={styles.paymentCard}>
+              <TouchableOpacity
+                key={payment.id}
+                style={styles.paymentCard}
+                activeOpacity={0.85}
+                onPress={() => handleView(payment.id)}
+              >
                 <Text style={styles.amount}>{payment.amount.toLocaleString()} SAR</Text>
                 <Text style={styles.details}>
                   Property ID: {payment.propertyId} {payment.unitId ? `| Unit: ${payment.unitId}` : ""}
                 </Text>
                 <Text style={styles.details}>Date: {payment.paymentDate}</Text>
-                {payment.notes && (
-                  <Text style={styles.details}>Notes: {payment.notes}</Text>
-                )}
-              </View>
+                {payment.notes && <Text style={styles.details}>Notes: {payment.notes}</Text>}
+
+                <View style={styles.actions}>
+                  <TouchableOpacity style={styles.editButton} onPress={() => handleEdit(payment.id)}>
+                    <Ionicons name="create-outline" size={20} color="orange" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(payment.id)}>
+                    <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
             ))
           )}
         </ScrollView>
@@ -80,7 +117,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#17b8a6",
     padding: 15,
-    marginBottom: 10,
   },
   headerTitle: {
     fontSize: 18,
@@ -122,4 +158,13 @@ const styles = StyleSheet.create({
     color: "#666",
     marginBottom: 3,
   },
+  actions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 10,
+  },
+  editButton: {
+    marginRight: 10,
+  },
+  deleteButton: {},
 });

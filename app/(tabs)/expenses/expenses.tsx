@@ -1,12 +1,9 @@
-// app/(tabs)/expenses.tsx
-
 import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-// تحتاج دالة تجيب المصاريف من الموك داتا (بنضبطها لاحقاً)
-import { getAllExpenses } from "../../lib/mockData"; 
-import type { Expense } from "../../lib/mockData";
+import { getAllExpenses } from "../../../lib/mockData"; 
+import type { Expense } from "../../../lib/mockData";
 
 const Expenses = () => {
   const router = useRouter();
@@ -28,13 +25,19 @@ const Expenses = () => {
   }, []);
 
   const handleAddExpense = () => {
-    router.push("/(tabs)/addExpense");
+    router.push("/(tabs)/expenses/addExpense");
+  };
+
+  const handleEditExpense = (expenseId: string) => {
+    router.push({ pathname: "/(tabs)/expenses/editExpense", params: { expenseId } });
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="white" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Expenses</Text>
         <TouchableOpacity onPress={handleAddExpense}>
           <Ionicons name="add-circle-outline" size={28} color="white" />
@@ -52,19 +55,28 @@ const Expenses = () => {
           ) : (
             expenses.map((expense) => (
               <View key={expense.id} style={styles.expenseCard}>
-                <Text style={styles.expenseType}>{expense.expenseType}</Text>
-                <Text style={styles.amount}>{expense.amount.toLocaleString()} SAR</Text>
-                <Text style={styles.details}>
-                  Property ID: {expense.propertyId} {expense.unitId ? `| Unit: ${expense.unitId}` : ""}
-                </Text>
-                <Text style={styles.details}>
-                  Date: {expense.expenseDate}
-                </Text>
-                {expense.notes && (
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => router.push({
+                    pathname: "/(tabs)/expenses/expense-details",
+                    params: { expenseId: expense.id }
+                  })}
+                >
+                  <Text style={styles.expenseType}>{expense.expenseType}</Text>
+                  <Text style={styles.amount}>{expense.amount.toLocaleString()} SAR</Text>
                   <Text style={styles.details}>
-                    Notes: {expense.notes}
+                    Property ID: {expense.propertyId} {expense.unitId ? `| Unit: ${expense.unitId}` : ""}
                   </Text>
-                )}
+                  <Text style={styles.details}>Date: {expense.expenseDate}</Text>
+                  {expense.notes && (
+                    <Text style={styles.details}>Notes: {expense.notes}</Text>
+                  )}
+                </TouchableOpacity>
+                <View style={styles.editButtonRow}>
+                  <TouchableOpacity onPress={() => handleEditExpense(expense.id)}>
+                    <Ionicons name="create-outline" size={20} color="#FFA500" />
+                  </TouchableOpacity>
+                </View>
               </View>
             ))
           )}
@@ -87,7 +99,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#17b8a6",
     padding: 15,
-    marginBottom: 10,
   },
   headerTitle: {
     fontSize: 18,
@@ -132,5 +143,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#666",
     marginBottom: 3,
+  },
+  editButtonRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 10,
   },
 });

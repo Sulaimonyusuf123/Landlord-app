@@ -4,7 +4,7 @@ import { TextInput, Button, Text, ActivityIndicator, Snackbar } from "react-nati
 import { useForm, Controller } from "react-hook-form";
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getUnitById, updateUnitOfProperty } from "../../lib/mockData";
+import { getUnitById, updateUnitOfProperty } from "../../../lib/mockData";
 
 interface UnitFormData {
     size: string;
@@ -59,7 +59,7 @@ const EditUnit = () => {
             setSnackbarVisible(true);
 
             setTimeout(() => {
-                router.replace("/(tabs)/properties");
+                router.replace("/(tabs)/properties/properties");
             }, 1000);
 
         } catch (error) {

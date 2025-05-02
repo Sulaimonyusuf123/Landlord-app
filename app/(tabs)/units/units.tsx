@@ -1,39 +1,86 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Image } from "expo-image";
-import mockProperties from "../../lib/mockData"; // بيانات العقارات والوحدات
+import { deleteUnitFromProperty, getPropertyById } from "../../../lib/mockData";
+import type { Unit } from "../../../lib/mockData";
 
 const Units = () => {
   const router = useRouter();
   const { propertyId } = useLocalSearchParams();
-  const [units, setUnits] = useState([]);
+  const [units, setUnits] = useState<Unit[]>([]);
+
+  const loadUnits = async () => {
+    if (propertyId) {
+      const property = await getPropertyById(propertyId.toString());
+      setUnits(property?.units || []);
+    }
+  };
 
   useEffect(() => {
-    if (propertyId) {
-      const selected = mockProperties.find((p) => p.id === propertyId);
-      setUnits(selected?.units || []);
-    }
+    loadUnits();
   }, [propertyId]);
 
   const goToAddUnit = () => {
-    router.push({ pathname: "/(tabs)/addUnit", params: { propertyId } });
+    router.push({ pathname: "/(tabs)/units/addUnit", params: { propertyId } });
   };
 
-  const renderUnit = ({ item }) => (
+  const handleEditUnit = (unitId: string) => {
+    router.push({ pathname: "/(tabs)/units/editUnit", params: { propertyId, unitId } });
+  };
+
+  const handleDeleteUnit = async (unitId: string) => {
+    Alert.alert("Delete Unit", "Are you sure you want to delete this unit?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          await deleteUnitFromProperty(propertyId!.toString(), unitId);
+          loadUnits();
+        },
+      },
+    ]);
+  };
+
+  const renderUnit = ({ item }: { item: Unit }) => (
     <View style={styles.unitCard}>
-      <Image
-        source={item.imageUrl ? { uri: item.imageUrl } : require("../../assets/images/build.png")}
-        style={styles.unitImage}
-        contentFit="cover"
-      />
-      <View style={styles.unitInfo}>
-        <Text style={styles.unitTitle}>Unit #{item.unitNumber}</Text>
-        <Text style={styles.unitDetails}>Size: {item.size} m² • Rent: {item.rent} SAR</Text>
-        <Text style={styles.unitDetails}>Rooms: {item.bedrooms} • Baths: {item.bathrooms}</Text>
-        <Text style={styles.unitStatus}>{item.tenant ? "🟢 Occupied" : "🔘 Vacant"}</Text>
-      </View>
+      <TouchableOpacity
+        style={{ flex: 1, flexDirection: "row", alignItems: "center" }}
+        activeOpacity={0.85}
+        onPress={() =>
+          router.push({
+            pathname: "/(tabs)/units/unit-details",
+            params: { propertyId: propertyId?.toString() || "", unitId: item.id },
+          })
+        }
+      >
+        <Image
+          source={
+            item.imageUrl ? { uri: item.imageUrl } : { uri: "https://via.placeholder.com/40" }
+          }
+          style={styles.unitImage}
+          contentFit="cover"
+        />
+        <View style={styles.unitInfo}>
+          <Text style={styles.unitTitle}>Unit #{item.unitNumber}</Text>
+          <Text style={styles.unitDetails}>
+            Size: {item.size} m² • Rent: {item.rentAmount} SAR
+          </Text>
+          <Text style={styles.unitDetails}>
+            Rooms: {item.bedrooms} • Baths: {item.bathrooms}
+          </Text>
+          <Text style={styles.unitStatus}>{item.tenantId ? "🟢 Occupied" : "🔘 Vacant"}</Text>
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => handleEditUnit(item.id)} style={styles.actionButton}>
+        <Ionicons name="create-outline" size={20} color="#FFA500" />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => handleDeleteUnit(item.id)} style={styles.actionButton}>
+        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+      </TouchableOpacity>
     </View>
   );
 
@@ -60,7 +107,7 @@ const Units = () => {
         <FlatList
           data={units}
           renderItem={renderUnit}
-          keyExtractor={(item) => item.unitNumber?.toString() || Math.random().toString()}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
         />
       )}
@@ -151,5 +198,8 @@ const styles = StyleSheet.create({
   emptyAddButtonText: {
     color: "white",
     fontWeight: "600",
+  },
+  actionButton: {
+    marginLeft: 10,
   },
 });

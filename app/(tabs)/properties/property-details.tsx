@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getPropertyById, getUnitsOfProperty, deletePropertyFromMock } from '../../lib/mockData';
-import type { Property, Unit } from '../../lib/mockData';
+import { getPropertyById, getUnitsOfProperty, deletePropertyFromMock } from '../../../lib/mockData';
+import type { Property, Unit } from '../../../lib/mockData';
 
 const PropertyDetails = () => {
   const router = useRouter();
@@ -45,7 +45,7 @@ const PropertyDetails = () => {
           style: "destructive",
           onPress: async () => {
             await deletePropertyFromMock(propertyId);
-            router.replace("/(tabs)/properties");
+            router.replace("/(tabs)/properties/properties");
           },
         },
       ]
@@ -53,15 +53,15 @@ const PropertyDetails = () => {
   };
 
   const handleEditProperty = () => {
-    router.push({ pathname: '/(tabs)/editProperty', params: { propertyId } });
+    router.push({ pathname: '/(tabs)/properties/editProperty', params: { propertyId } });
   };
 
   const handleAddUnit = () => {
-    router.push({ pathname: '/(tabs)/addUnit', params: { propertyId } });
+    router.push({ pathname: '/(tabs)/units/addUnit', params: { propertyId } });
   };
 
   const handleViewUnit = (unitId: string) => {
-    router.push({ pathname: '/(tabs)/unit-details', params: { propertyId, unitId } });
+    router.push({ pathname: '/(tabs)/units/unit-details', params: { propertyId, unitId } });
   };
 
   if (loading) {

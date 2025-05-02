@@ -3,8 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getUnitById, getTenantById, removeTenantFromUnit } from '../../lib/mockData';
-import type { Unit, Tenant } from '../../lib/mockData';
+import { getUnitById, getTenantById, removeTenantFromUnit } from '../../../lib/mockData';
+import type { Unit, Tenant } from '../../../lib/mockData';
 
 const UnitDetails = () => {
   const router = useRouter();
@@ -37,13 +37,13 @@ const UnitDetails = () => {
   }, [propertyId, unitId]);
 
   const handleAddTenant = () => {
-    router.push({ pathname: '/(tabs)/addTenant', params: { propertyId, unitId } });
+    router.push({ pathname: '/(tabs)/tenants/addTenant', params: { propertyId, unitId } });
 
   };
 
   const handleEditTenant = () => {
     if (tenant) {
-      router.push({ pathname: '/(tabs)/editTenant', params: { tenantId: tenant.id } });
+      router.push({ pathname: '/(tabs)/tenants/editTenant', params: { tenantId: tenant.id } });
     }
   };
 
