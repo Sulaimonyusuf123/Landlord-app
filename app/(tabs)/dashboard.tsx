@@ -162,7 +162,7 @@ const Dashboard = () => {
             <Text style={styles.noPropertiesText}>You don't have any properties yet.</Text>
             <TouchableOpacity 
               style={styles.addPropertyButton}
-              onPress={() => router.push("/(tabs)/addProperty")}
+              onPress={() => router.push("/(tabs)/properties/addProperty")}
             >
               <Text style={styles.addPropertyButtonText}>+ Add Your First Property</Text>
             </TouchableOpacity>
@@ -173,7 +173,7 @@ const Dashboard = () => {
         <View style={styles.quickActions}>
           <TouchableOpacity 
             style={styles.quickAction}
-            onPress={() => router.push("/(tabs)/addPayment")}
+            onPress={() => router.push("/(tabs)/payments/addPayment")}
           >
             <Ionicons name="cash-outline" size={28} color="#17b8a6" />
             <Text style={styles.actionText}>Add Payment</Text>
@@ -181,7 +181,7 @@ const Dashboard = () => {
 
           <TouchableOpacity 
             style={styles.quickAction}
-            onPress={() => router.push("/(tabs)/addExpense")}
+            onPress={() => router.push("/(tabs)/expenses/addExpense")}
           >
             <Ionicons name="receipt-outline" size={28} color="#17b8a6" />
             <Text style={styles.actionText}>Add Expense</Text>
