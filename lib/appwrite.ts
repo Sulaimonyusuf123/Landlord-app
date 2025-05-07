@@ -14,7 +14,7 @@ const BUCKET_ID = '67fa77ef00297ab9936b';
 
 // Collection IDs 
 const COLLECTIONS = {
-  properties: '681b542680282367a913',
+  properties: '681b542600220327e193',
   units: '681b5cc3000a9de1418f',
   tenants: '681b5f83000f793ae0a7',
   payments: '681b75b00011094a3965',

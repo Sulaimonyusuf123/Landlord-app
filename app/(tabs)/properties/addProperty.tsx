@@ -46,6 +46,7 @@ const AddProperty = () => {
   };
 
   const onSubmit = async (data: any) => {
+    console.log("USER:", user);
     if (!user) return;
 
     try {
