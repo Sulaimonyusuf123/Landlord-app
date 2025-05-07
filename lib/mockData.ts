@@ -35,7 +35,9 @@ export interface Unit {
   payments?: { amount: number; date: string }[];
   floorNumber?: number;
   notes?: string;
+  unitNumber?: string; 
 }
+
 
 export interface Tenant {
   id: string;
