@@ -47,7 +47,7 @@ const EditExpense = () => {
         notes,
       });
       Alert.alert("Success", "Expense updated successfully.");
-      router.back();
+      router.replace("/(tabs)/expenses/expenses");
     } catch (error) {
       Alert.alert("Error", "Failed to update expense.");
     }
@@ -72,7 +72,7 @@ const EditExpense = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.replace("/(tabs)/expenses/expenses")}>
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Expense</Text>

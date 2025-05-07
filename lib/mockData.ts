@@ -17,6 +17,9 @@ export interface Property {
   operatingCosts?: number;
   profitability?: number;
   units?: Unit[];
+  tenantId?: string;
+  startDate?: string;
+  status?: 'vacant' | 'occupied';
 }
 
 export interface Unit {
@@ -143,12 +146,36 @@ export const saveTenantToMock = async (propertyId: string, unitId: string, tenan
   } else {
     mockTenants.push(tenant);
   }
-  
+
   unit.tenantId = tenant.id;
   unit.status = 'occupied';
   unit.startDate = new Date().toISOString();
 };
 
+export const saveTenantToProperty = async (propertyId: string, tenant: Tenant): Promise<void> => {
+  const property = await getPropertyById(propertyId);
+  if (!property || property.type === 'building') throw new Error('Invalid property type for direct tenant');
+
+  const index = mockTenants.findIndex((t) => t.id === tenant.id);
+  if (index !== -1) {
+    mockTenants[index] = { ...mockTenants[index], ...tenant };
+  } else {
+    mockTenants.push(tenant);
+  }
+
+  property.tenantId = tenant.id;
+  property.status = 'occupied';
+  property.startDate = new Date().toISOString();
+};
+
+export const removeTenantFromProperty = async (propertyId: string): Promise<void> => {
+  const property = await getPropertyById(propertyId);
+  if (!property || property.type === 'building') throw new Error('Invalid property type for tenant removal');
+
+  property.tenantId = undefined;
+  property.startDate = undefined;
+  property.status = 'vacant';
+};
 
 export const getAllTenants = async (): Promise<Tenant[]> => mockTenants;
 
@@ -164,6 +191,7 @@ export const deleteTenantFromMock = async (tenantId: string): Promise<void> => {
   const index = mockTenants.findIndex((t) => t.id === tenantId);
   if (index !== -1) mockTenants.splice(index, 1);
 };
+
 export const removeTenantFromUnit = async (propertyId: string, unitId: string): Promise<void> => {
   const property = await getPropertyById(propertyId);
   if (!property) throw new Error('Property not found');
@@ -174,7 +202,6 @@ export const removeTenantFromUnit = async (propertyId: string, unitId: string): 
   unit.status = 'vacant';
   unit.startDate = undefined;
 };
-
 
 // Payments
 export const savePaymentToMock = async (payment: Payment): Promise<void> => {
@@ -264,10 +291,13 @@ export default {
   updateUnitOfProperty,
   deleteUnitFromProperty,
   saveTenantToMock,
+  saveTenantToProperty,
+  removeTenantFromProperty,
   getAllTenants,
   getTenantById,
   updateTenantInMock,
   deleteTenantFromMock,
+  removeTenantFromUnit,
   savePaymentToMock,
   getAllPayments,
   updatePaymentInMock,
@@ -277,4 +307,3 @@ export default {
   updateExpenseInMock,
   deleteExpenseFromMock,
 };
-

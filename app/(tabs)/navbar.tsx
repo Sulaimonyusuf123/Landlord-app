@@ -37,27 +37,27 @@ const Navbar: React.FC<NavbarProps> = ({ closeNav }) => {
         <Text style={styles.navText}>Dashboard</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push("/(tabs)/properties")} style={styles.navItem}>
+      <TouchableOpacity onPress={() => router.push("/(tabs)/properties/properties")} style={styles.navItem}>
         <Ionicons name="home" size={20} color="teal" />
         <Text style={styles.navText}>Properties</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push("/(tabs)/payments")} style={styles.navItem}>
+      <TouchableOpacity onPress={() => router.push("/(tabs)/payments/payments")} style={styles.navItem}>
         <Ionicons name="cash" size={20} color="teal" />
         <Text style={styles.navText}>Payments</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push("/(tabs)/expenses")} style={styles.navItem}>
+      <TouchableOpacity onPress={() => router.push("/(tabs)/expenses/expenses")} style={styles.navItem}>
         <Ionicons name="receipt" size={20} color="teal" />
         <Text style={styles.navText}>Expenses</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push("/(tabs)/tenants")} style={styles.navItem}>
+      <TouchableOpacity onPress={() => router.push("/(tabs)/tenants/tenants")} style={styles.navItem}>
         <Ionicons name="people" size={20} color="teal" />
         <Text style={styles.navText}>Tenants</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => router.push("/(tabs)/paymentReport")} style={styles.navItem}>
+      <TouchableOpacity onPress={() => router.push("/(tabs)/payments/paymentReport")} style={styles.navItem}>
         <Ionicons name="analytics" size={20} color="teal" />
         <Text style={styles.navText}>Payment Report</Text>
       </TouchableOpacity>

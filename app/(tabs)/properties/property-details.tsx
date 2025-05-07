@@ -60,6 +60,10 @@ const PropertyDetails = () => {
     router.push({ pathname: '/(tabs)/units/addUnit', params: { propertyId } });
   };
 
+  const handleAddTenant = () => {
+    router.push({ pathname: '/(tabs)/tenants/addTenant', params: { propertyId, unitId: 'property-root' } });
+  };
+
   const handleViewUnit = (unitId: string) => {
     router.push({ pathname: '/(tabs)/units/unit-details', params: { propertyId, unitId } });
   };
@@ -84,7 +88,7 @@ const PropertyDetails = () => {
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.replace("/(tabs)/properties/properties")}>
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{property.name}</Text>
@@ -108,7 +112,7 @@ const PropertyDetails = () => {
       </View>
 
       {/* Units List */}
-      {property.type === 'building' && (
+      {property.type === 'building' ? (
         <>
           <View style={styles.unitsHeader}>
             <Text style={styles.sectionTitle}>Units</Text>
@@ -135,6 +139,12 @@ const PropertyDetails = () => {
             ))
           )}
         </>
+      ) : (
+        <View style={{ paddingHorizontal: 20, marginTop: 20 }}>
+          <TouchableOpacity onPress={handleAddTenant} style={styles.addUnitButton}>
+            <Text style={styles.addUnitButtonText}>+ Add Tenant</Text>
+          </TouchableOpacity>
+        </View>
       )}
     </ScrollView>
   );

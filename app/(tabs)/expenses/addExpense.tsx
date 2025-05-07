@@ -75,7 +75,7 @@ const AddExpense = () => {
       });
 
       Alert.alert("Success", "Expense saved successfully!");
-      router.back();
+      router.replace("/(tabs)/expenses/expenses");
     } catch (error) {
       console.error("Failed to save expense:", error);
       Alert.alert("Error", "Failed to save expense. Please try again.");
@@ -98,7 +98,7 @@ const AddExpense = () => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.replace("/(tabs)/expenses/expenses")}>
           <Ionicons name="arrow-back" size={28} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add Expense</Text>

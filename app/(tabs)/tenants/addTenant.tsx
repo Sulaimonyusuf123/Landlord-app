@@ -17,7 +17,7 @@ interface TenantFormData {
 
 const AddTenant = () => {
   const router = useRouter();
-  const { propertyId, unitId } = useLocalSearchParams<{ propertyId: string, unitId: string }>();
+  const { propertyId, unitId } = useLocalSearchParams<{ propertyId?: string, unitId?: string }>();
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<TenantFormData>();
   const [image, setImage] = useState<string | null>(null);

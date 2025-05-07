@@ -9,7 +9,7 @@ const Properties = () => {
   const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0); // لإجبار إعادة التحميل بعد الحذف
+  const [refreshKey, setRefreshKey] = useState(0); 
 
   useEffect(() => {
     const fetchProperties = async () => {
@@ -60,7 +60,7 @@ const Properties = () => {
           onPress: async () => {
             try {
               await deletePropertyFromMock(propertyId);
-              setRefreshKey(prev => prev + 1); // تحديث المفتاح لإعادة التحميل
+              setRefreshKey(prev => prev + 1); 
               Alert.alert("Deleted", "Property has been deleted.");
             } catch (error) {
               console.error("Failed to delete property:", error);
@@ -76,7 +76,7 @@ const Properties = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.replace("/(tabs)/dashboard")}>
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Properties</Text>

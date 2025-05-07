@@ -97,7 +97,7 @@ const AddPayment = () => {
       });
 
       Alert.alert("Success", "Payment saved successfully!");
-      router.back();
+      router.replace("/(tabs)/payments/payments");
     } catch (error) {
       console.error("Failed to save payment:", error);
       Alert.alert("Error", "Failed to save payment. Please try again.");
@@ -121,7 +121,7 @@ const AddPayment = () => {
     <View style={styles.container}>
       {/* Header with Back Button */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace("/(tabs)/payments/payments")} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Add Payment</Text>

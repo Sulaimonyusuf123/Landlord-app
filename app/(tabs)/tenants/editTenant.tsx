@@ -5,7 +5,7 @@ import { useForm, Controller } from "react-hook-form";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getTenantById, updateTenantInMock } from "../../../lib/mockData";
+import { getTenantById, updateTenantInMock, saveTenantToMock } from "../../../lib/mockData";
 
 interface TenantFormData {
   name: string;
@@ -17,7 +17,11 @@ interface TenantFormData {
 
 const EditTenant = () => {
   const router = useRouter();
-  const { tenantId } = useLocalSearchParams<{ tenantId: string }>();
+  const { tenantId, propertyId, unitId } = useLocalSearchParams<{
+    tenantId: string;
+    propertyId?: string;
+    unitId?: string;
+  }>();
 
   const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm<TenantFormData>();
   const [image, setImage] = useState<string | null>(null);
@@ -61,10 +65,21 @@ const EditTenant = () => {
     try {
       setLoading(true);
 
-      await updateTenantInMock(tenantId!, {
-        ...data,
+      const tenant = {
+        id: tenantId!,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        state: data.state || '',
+        city: data.city || '',
         imageUrl: image || undefined,
-      });
+      };
+
+      await updateTenantInMock(tenantId!, tenant);
+
+      if (propertyId && unitId) {
+        await saveTenantToMock(propertyId, unitId, tenant);
+      }
 
       setSnackbarMessage("Tenant updated successfully!");
       setSnackbarVisible(true);
@@ -92,92 +107,42 @@ const EditTenant = () => {
           <View style={{ width: 24 }} />
         </View>
 
-        <Controller
-          control={control}
-          name="name"
-          rules={{ required: "Name is required" }}
+        {/* Form Fields */}
+        <Controller control={control} name="name" rules={{ required: "Name is required" }}
           render={({ field: { onChange, value } }) => (
-            <TextInput 
-              label="Name" 
-              value={value} 
-              onChangeText={onChange} 
-              style={styles.input}
-              error={!!errors.name}
-            />
-          )}
-        />
-        {errors.name?.message && <Text style={styles.errorText}>{errors.name.message}</Text>}
+            <TextInput label="Name" value={value} onChangeText={onChange} style={styles.input} error={!!errors.name} />
+          )} />
+        {errors.name && <Text style={styles.errorText}>{errors.name.message}</Text>}
 
-        <Controller
-          control={control}
-          name="email"
-          rules={{ 
-            required: "Email is required",
-            pattern: {
-              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-              message: "Invalid email address"
-            }
-          }}
+        <Controller control={control} name="email" rules={{ required: "Email is required", pattern: {
+          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$/i, message: "Invalid email address"
+        }}}
           render={({ field: { onChange, value } }) => (
-            <TextInput 
-              label="Email" 
-              value={value} 
-              onChangeText={onChange} 
-              style={styles.input}
-              error={!!errors.email}
-            />
-          )}
-        />
-        {errors.email?.message && <Text style={styles.errorText}>{errors.email.message}</Text>}
+            <TextInput label="Email" value={value} onChangeText={onChange} style={styles.input} error={!!errors.email} />
+          )} />
+        {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
 
-        <Controller
-          control={control}
-          name="phone"
-          rules={{ required: "Phone number is required" }}
+        <Controller control={control} name="phone" rules={{ required: "Phone number is required" }}
           render={({ field: { onChange, value } }) => (
-            <TextInput 
-              label="Phone" 
-              value={value} 
-              onChangeText={onChange} 
-              style={styles.input} 
-              keyboardType="phone-pad"
-              error={!!errors.phone}
-            />
-          )}
-        />
-        {errors.phone?.message && <Text style={styles.errorText}>{errors.phone.message}</Text>}
+            <TextInput label="Phone" value={value} onChangeText={onChange} keyboardType="phone-pad" style={styles.input} error={!!errors.phone} />
+          )} />
+        {errors.phone && <Text style={styles.errorText}>{errors.phone.message}</Text>}
 
-        <Controller
-          control={control}
-          name="state"
+        <Controller control={control} name="state"
           render={({ field: { onChange, value } }) => (
             <TextInput label="State" value={value} onChangeText={onChange} style={styles.input} />
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="city"
+          )} />
+        <Controller control={control} name="city"
           render={({ field: { onChange, value } }) => (
             <TextInput label="City" value={value} onChangeText={onChange} style={styles.input} />
-          )}
-        />
+          )} />
 
         <TouchableOpacity onPress={pickImage} style={styles.imagePicker}>
           {image ? <Image source={{ uri: image }} style={styles.image} /> : <Text>+ Upload Image</Text>}
         </TouchableOpacity>
 
-        <Button 
-          mode="contained" 
-          onPress={handleSubmit(onSubmit)} 
-          style={styles.button}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator animating={true} color="white" />
-          ) : (
-            "Update"
-          )}
+        <Button mode="contained" onPress={handleSubmit(onSubmit)} style={styles.button} disabled={loading}>
+          {loading ? <ActivityIndicator animating color="white" /> : "Update"}
         </Button>
 
         <Snackbar
@@ -185,10 +150,7 @@ const EditTenant = () => {
           onDismiss={() => setSnackbarVisible(false)}
           duration={3000}
           style={styles.snackbar}
-          action={{
-            label: 'OK',
-            onPress: () => setSnackbarVisible(false),
-          }}
+          action={{ label: 'OK', onPress: () => setSnackbarVisible(false) }}
         >
           {snackbarMessage}
         </Snackbar>
@@ -200,14 +162,8 @@ const EditTenant = () => {
 export default EditTenant;
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    paddingBottom: 20,
-  },
-  container: {
-    padding: 20,
-    backgroundColor: "#fff",
-    flex: 1,
-  },
+  scrollContainer: { paddingBottom: 20 },
+  container: { padding: 20, backgroundColor: "#fff", flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -218,21 +174,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     justifyContent: 'space-between',
   },
-  headerText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  input: {
-    marginBottom: 5,
-    backgroundColor: "#dff8eb",
-  },
-  errorText: {
-    color: 'red',
-    fontSize: 12,
-    marginBottom: 10,
-    marginLeft: 5,
-  },
+  headerText: { color: 'white', fontSize: 18, fontWeight: 'bold' },
+  input: { marginBottom: 5, backgroundColor: "#dff8eb" },
+  errorText: { color: 'red', fontSize: 12, marginBottom: 10, marginLeft: 5 },
   imagePicker: {
     borderWidth: 1,
     borderColor: "#dff8eb",
@@ -242,15 +186,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 20,
   },
-  image: {
-    width: 100,
-    height: 100,
-    borderRadius: 5,
-  },
-  button: {
-    marginTop: 10,
-    backgroundColor: '#009688',
-  },
+  image: { width: 100, height: 100, borderRadius: 5 },
+  button: { marginTop: 10, backgroundColor: '#009688' },
   snackbar: {
     backgroundColor: '#4CAF50',
     position: 'absolute',

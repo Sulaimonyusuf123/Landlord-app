@@ -21,7 +21,7 @@ const AddProperty = () => {
     reset,
     formState: { errors },
   } = useForm();
-  
+
   const [image, setImage] = useState<string | undefined>(undefined);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -73,7 +73,7 @@ const AddProperty = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace("/(tabs)/properties/properties")} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerText}>Add Property</Text>

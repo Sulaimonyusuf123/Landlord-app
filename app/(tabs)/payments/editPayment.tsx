@@ -27,7 +27,7 @@ const EditPayment = () => {
           setNotes(existing.notes || "");
         } else {
           Alert.alert("Error", "Payment not found.");
-          router.back();
+          router.replace("/(tabs)/payments/payments");
         }
       } catch (error) {
         console.error("Error loading payment:", error);
@@ -51,7 +51,7 @@ const EditPayment = () => {
         notes,
       });
       Alert.alert("Updated", "Payment updated successfully.");
-      router.back();
+      router.replace("/(tabs)/payments/payments");
     } catch (error) {
       console.error("Failed to update payment:", error);
       Alert.alert("Error", "Failed to update payment.");
@@ -70,7 +70,7 @@ const EditPayment = () => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.replace("/(tabs)/payments/payments")}>
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Payment</Text>
