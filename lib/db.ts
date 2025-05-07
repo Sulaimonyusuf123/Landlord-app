@@ -1,5 +1,6 @@
 // lib/db.ts
 import { databases, ID, DATABASE_ID, COLLECTIONS, Query } from './appwrite';
+import type { Property, Unit, Tenant, Payment, Expense, Notification } from './types';
 
 // Helper to map Appwrite document
 const mapDoc = (doc: any) => ({ ...doc, id: doc.$id });
@@ -21,7 +22,7 @@ const createNotification = async (userId: string, title: string, message: string
 // ========== PROPERTIES ==========
 export const createProperty = async (property: any) => {
   const doc = await databases.createDocument(DATABASE_ID, COLLECTIONS.properties, ID.unique(), property);
-  await createNotification(property.userId, 'Property Added', `Property "${property.name}" was added.`);
+  await createNotification(property.ownerId, 'Property Added', `Property "${property.name}" was added.`);
   return mapDoc(doc);
 };
 
@@ -137,6 +138,26 @@ export const createPayment = async (payment: any) => {
   return mapDoc(doc);
 };
 
+export const getPaymentById = async (id: string): Promise<Payment> => {
+  const res = await databases.listDocuments(DATABASE_ID, COLLECTIONS.payments, [
+    Query.equal('$id', id)
+  ]);
+  if (!res.documents.length) throw new Error("Payment not found");
+
+  const doc = res.documents[0];
+  return {
+    id: doc.$id,
+    propertyId: doc.propertyId,
+    unitId: doc.unitId ?? undefined,
+    amount: doc.amount,
+    paymentDate: doc.paymentDate,
+    notes: doc.notes ?? '',
+    userId: doc.userId,
+  };
+};
+
+
+
 export const getAllPayments = async (userId: string) => {
   const res = await databases.listDocuments(DATABASE_ID, COLLECTIONS.payments, [Query.equal('userId', userId)]);
   return res.documents.map(mapDoc);
@@ -182,8 +203,33 @@ export const createExpense = async (expense: any) => {
   return mapDoc(doc);
 };
 
-export const getAllExpenses = async (userId: string) => {
-  const res = await databases.listDocuments(DATABASE_ID, COLLECTIONS.expenses, [Query.equal('userId', userId)]);
+export const getExpenseById = async (id: string): Promise<Expense> => {
+  const res = await databases.listDocuments(
+    DATABASE_ID,
+    COLLECTIONS.expenses,
+    [Query.equal('$id', id)]
+  );
+  if (!res.documents.length) throw new Error('Expense not found');
+
+  const doc = res.documents[0];
+  return {
+    id: doc.$id,
+    propertyId: doc.propertyId,
+    unitId: doc.unitId ?? undefined,
+    expenseType: doc.expenseType,
+    amount: doc.amount,
+    expenseDate: doc.expenseDate,
+    notes: doc.notes ?? '',
+    userId: doc.userId,
+  };
+};
+
+export const getAllExpenses = async (userId: string): Promise<Expense[]> => {
+  const res = await databases.listDocuments(
+    DATABASE_ID,
+    COLLECTIONS.expenses,
+    [Query.equal('userId', userId)]
+  );
   return res.documents.map(mapDoc);
 };
 
@@ -227,7 +273,7 @@ export const assignTenantToUnit = async (unitId: string, tenantId: string, userI
   return unit;
 };
 
-export const removeTenantFromUnit = async (unitId: string) => {
+export const removeTenantFromUnit = async (unitId: string, $id: string) => {
   const unit = await updateUnit(unitId, {
     tenantId: null,
     status: 'vacant',
@@ -261,14 +307,13 @@ export const removeTenantFromProperty = async (propertyId: string) => {
 
 // ========== NOTIFICATIONS ==========
 export const getNotificationsByUser = async (userId: string) => {
-    const res = await databases.listDocuments(DATABASE_ID, COLLECTIONS.notifications, [
-      Query.equal('userId', userId),
-      Query.orderDesc('$createdAt')
-    ]);
-    return res.documents.map(mapDoc);
-  };
-  
-  export const deleteNotification = async (id: string) => {
-    await databases.deleteDocument(DATABASE_ID, COLLECTIONS.notifications, id);
-  };
-  
+  const res = await databases.listDocuments(DATABASE_ID, COLLECTIONS.notifications, [
+    Query.equal('userId', userId),
+    Query.orderDesc('$createdAt')
+  ]);
+  return res.documents.map(mapDoc);
+};
+
+export const deleteNotification = async (id: string) => {
+  await databases.deleteDocument(DATABASE_ID, COLLECTIONS.notifications, id);
+};

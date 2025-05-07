@@ -4,29 +4,33 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, ActivityIndicator, Image } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { getTenantById, deleteTenantFromMock } from "../../../lib/mockData";
-import type { Tenant } from "../../../lib/mockData";
+import { getTenantById, deleteTenant } from "../../../lib/db";
+import { useAuth } from "../../../lib/authService";
+import type { Tenant } from "../../../lib/types";
 
 const TenantDetails = () => {
   const router = useRouter();
+  const { user } = useAuth();
   const { tenantId } = useLocalSearchParams<{ tenantId: string }>();
 
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchTenant = async () => {
-      try {
-        const tenantData = await getTenantById(tenantId!);
-        setTenant(tenantData || null);
-      } catch (error) {
-        console.error("Failed to load tenant:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (tenantId) fetchTenant();
-  }, [tenantId]);
+    if (tenantId && user) fetchTenant();
+  }, [tenantId, user]);
+
+  const fetchTenant = async () => {
+    try {
+      setLoading(true);
+      const tenantData = await getTenantById(tenantId!, user!.$id);
+      setTenant(tenantData || null);
+    } catch (error) {
+      console.error("Failed to load tenant:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEditTenant = () => {
     router.push(`/(tabs)/tenants/editTenant?tenantId=${tenantId}`);
@@ -38,17 +42,20 @@ const TenantDetails = () => {
       "Are you sure you want to delete this tenant?",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: async () => {
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
             try {
-              await deleteTenantFromMock(tenantId!);
+              await deleteTenant(tenantId!);
               Alert.alert("Deleted", "Tenant deleted successfully!");
               router.replace("/(tabs)/tenants/tenants");
             } catch (error) {
               console.error("Failed to delete tenant:", error);
               Alert.alert("Error", "Failed to delete tenant.");
             }
-          } 
-        }
+          },
+        },
       ]
     );
   };
@@ -83,7 +90,6 @@ const TenantDetails = () => {
         {tenant.imageUrl && (
           <Image source={{ uri: tenant.imageUrl }} style={styles.image} />
         )}
-
         <Text style={styles.detailText}>Name: {tenant.name}</Text>
         <Text style={styles.detailText}>Email: {tenant.email}</Text>
         <Text style={styles.detailText}>Phone: {tenant.phone}</Text>

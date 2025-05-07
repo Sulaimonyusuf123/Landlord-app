@@ -6,6 +6,8 @@ export default function PaymentsLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="payments" />
       <Stack.Screen name="addPayment" />
+      <Stack.Screen name="editPayment" />
+      <Stack.Screen name="payment-details" />
       <Stack.Screen name="paymentReport" />
     </Stack>
   );

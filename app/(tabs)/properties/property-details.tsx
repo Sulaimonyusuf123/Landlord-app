@@ -2,29 +2,33 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getPropertyById, getUnitsOfProperty, deletePropertyFromMock } from '../../../lib/mockData';
-import type { Property, Unit } from '../../../lib/mockData';
+import { getPropertyById, getUnitsOfProperty, deleteProperty } from '../../../lib/db';
+import { useAuth } from '../../../lib/authService';
+import type { Property, Unit } from '../../../lib/types';
 
 const PropertyDetails = () => {
   const router = useRouter();
+  const { user } = useAuth();
   const params = useLocalSearchParams();
   const propertyId = params.propertyId as string;
+
   const [property, setProperty] = useState<Property | null>(null);
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchData();
-  }, [propertyId]);
+    if (user) fetchData();
+  }, [propertyId, user]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const prop = await getPropertyById(propertyId);
+      if (!user) return;
+      const prop = await getPropertyById(propertyId, user.$id);
       setProperty(prop || null);
 
       if (prop?.type === 'building') {
-        const unitList = await getUnitsOfProperty(propertyId);
+        const unitList = await getUnitsOfProperty(propertyId, user.$id);
         setUnits(unitList);
       }
     } catch (error) {
@@ -44,8 +48,12 @@ const PropertyDetails = () => {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            await deletePropertyFromMock(propertyId);
-            router.replace("/(tabs)/properties/properties");
+            try {
+              await deleteProperty(propertyId);
+              router.replace("/(tabs)/properties/properties");
+            } catch (e) {
+              Alert.alert("Error", "Failed to delete property.");
+            }
           },
         },
       ]
@@ -86,7 +94,6 @@ const PropertyDetails = () => {
 
   return (
     <ScrollView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.replace("/(tabs)/properties/properties")}>
           <Ionicons name="arrow-back" size={24} color="white" />
@@ -102,7 +109,6 @@ const PropertyDetails = () => {
         </View>
       </View>
 
-      {/* Property Info */}
       <View style={styles.details}>
         <Text style={styles.sectionTitle}>Property Information</Text>
         <Text style={styles.detailText}>Type: {property.type}</Text>
@@ -111,7 +117,6 @@ const PropertyDetails = () => {
         <Text style={styles.detailText}>City: {property.city || '-'}</Text>
       </View>
 
-      {/* Units List */}
       {property.type === 'building' ? (
         <>
           <View style={styles.unitsHeader}>

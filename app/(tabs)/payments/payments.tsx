@@ -1,19 +1,24 @@
+// app/(tabs)/payments/payments.tsx
+
 import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { getAllPayments, deletePaymentFromMock } from "../../../lib/mockData";
-import type { Payment } from "../../../lib/mockData";
+import { getAllPayments, deletePayment } from "../../../lib/db";
+import { useAuth } from "../../../lib/authService";
+import type { Payment } from "../../../lib/types";
 
 const Payments = () => {
   const router = useRouter();
+  const { user } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadPayments = async () => {
     try {
+      if (!user) return;
       setLoading(true);
-      const data = await getAllPayments();
+      const data = await getAllPayments(user.$id);
       setPayments(data);
     } catch (error) {
       console.error("Failed to load payments:", error);
@@ -24,7 +29,7 @@ const Payments = () => {
 
   useEffect(() => {
     loadPayments();
-  }, []);
+  }, [user]);
 
   const handleAddPayment = () => {
     router.push("/(tabs)/payments/addPayment");
@@ -41,7 +46,7 @@ const Payments = () => {
         text: "Delete",
         style: "destructive",
         onPress: async () => {
-          await deletePaymentFromMock(id);
+          await deletePayment(id);
           loadPayments();
         },
       },
@@ -107,10 +112,7 @@ const Payments = () => {
 export default Payments;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F5F7FA",
-  },
+  container: { flex: 1, backgroundColor: "#F5F7FA" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",

@@ -1,45 +1,91 @@
-import React from "react";
-import { View, ScrollView, StyleSheet, TouchableOpacity } from "react-native";
+// app/(tabs)/payments/paymentReport.tsx
+
+import React, { useEffect, useState } from "react";
+import { View, ScrollView, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { Text, Card } from "react-native-paper";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { getAllPayments, getTenantById, getPropertyById } from "../../../lib/db";
+import { getCurrentUser } from "../../../lib/authService";
 
-const payments = [
-  { id: 1, tenant: "Tenant 1", amount: "$5000", date: "2025/02/10" },
-  { id: 2, tenant: "Tenant 2", amount: "$5000", date: "2025/02/10" },
-  { id: 3, tenant: "Tenant 3", amount: "$5000", date: "2025/02/10" },
-  { id: 4, tenant: "Tenant 4", amount: "$5000", date: "2025/02/10" },
-  { id: 5, tenant: "Tenant 5", amount: "$5000", date: "2025/02/10" },
-];
+type PaymentInfo = {
+  id: string;
+  tenantName: string;
+  propertyName: string;
+  amount: number;
+  date: string;
+  type: string;
+};
 
 const PaymentReport = () => {
   const router = useRouter();
+  const [payments, setPayments] = useState<PaymentInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPayments = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user) return;
+
+        const rawPayments = await getAllPayments(user.$id);
+
+        const detailed = await Promise.all(
+          rawPayments.map(async (payment) => {
+            const tenant = payment.tenantId ? await getTenantById(payment.tenantId, user.$id) : null;
+            const property = await getPropertyById(payment.propertyId, user.$id);
+            return {
+              id: payment.id,
+              tenantName: tenant?.name || "Unknown Tenant",
+              propertyName: property?.name || "Unknown Property",
+              amount: payment.amount,
+              date: payment.paymentDate,
+              type: payment.notes || "General",
+            };
+          })
+        );
+
+
+        setPayments(detailed);
+      } catch (err) {
+        console.error("Failed to load payments", err);
+        Alert.alert("Error", "Failed to load payment report.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPayments();
+  }, []);
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.replace("/(tabs)/dashboard")}>
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerText}>Payment report</Text>
+        <Text style={styles.headerText}>Payment Report</Text>
       </View>
-      
-      {/* Payment List */}
+
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         {payments.map((payment) => (
           <Card key={payment.id} style={styles.card}>
             <Card.Content>
-              <Text style={styles.tenantName}>{payment.tenant}</Text>
-              <Text style={styles.details}>📎 1 Attachment</Text>
-              <Text style={styles.details}>🏛 debit</Text>
+              <Text style={styles.tenantName}>{payment.tenantName}</Text>
+              <Text style={styles.details}>🏠 {payment.propertyName}</Text>
+              <Text style={styles.details}>📋 {payment.type}</Text>
               <View style={styles.footer}>
-                <Text style={styles.amount}>+{payment.amount}</Text>
+                <Text style={styles.amount}>+{payment.amount.toLocaleString()} SAR</Text>
                 <Text style={styles.date}>{payment.date}</Text>
               </View>
             </Card.Content>
           </Card>
         ))}
+        {payments.length === 0 && !loading && (
+          <Text style={{ textAlign: "center", color: "#777", marginTop: 20 }}>
+            No payments found.
+          </Text>
+        )}
       </ScrollView>
     </View>
   );
@@ -102,5 +148,3 @@ const styles = StyleSheet.create({
     color: "#666",
   },
 });
-
-

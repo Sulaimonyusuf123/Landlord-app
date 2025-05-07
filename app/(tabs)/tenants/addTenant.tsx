@@ -5,7 +5,8 @@ import { useForm, Controller } from "react-hook-form";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { saveTenantToMock } from "../../../lib/mockData";
+import { createTenant } from "../../../lib/db";
+import { useAuth } from "../../../lib/authService";
 
 interface TenantFormData {
   name: string;
@@ -17,6 +18,7 @@ interface TenantFormData {
 
 const AddTenant = () => {
   const router = useRouter();
+  const { user } = useAuth();
   const { propertyId, unitId } = useLocalSearchParams<{ propertyId?: string, unitId?: string }>();
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<TenantFormData>();
@@ -39,8 +41,8 @@ const AddTenant = () => {
   };
 
   const onSubmit = async (data: TenantFormData) => {
-    if (!propertyId || !unitId) {
-      Alert.alert("Error", "Missing property or unit information.");
+    if (!propertyId || !unitId || !user?.$id) {
+      Alert.alert("Error", "Missing user, property or unit info.");
       return;
     }
 
@@ -48,18 +50,20 @@ const AddTenant = () => {
       setLoading(true);
 
       const tenant = {
-        id: Date.now().toString(),
         name: data.name,
         email: data.email,
         phone: data.phone,
         state: data.state || '',
         city: data.city || '',
         imageUrl: image || undefined,
+        userId: user.$id,
+        propertyId,
+        unitId
       };
 
-      await saveTenantToMock(propertyId, unitId, tenant);
+      await createTenant(tenant);
 
-      setSnackbarMessage("Tenant added and linked successfully!");
+      setSnackbarMessage("Tenant added successfully!");
       setSnackbarVisible(true);
       reset();
       setImage(null);

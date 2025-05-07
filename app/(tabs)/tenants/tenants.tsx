@@ -2,18 +2,21 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { getAllTenants, deleteTenantFromMock } from "../../../lib/mockData";
-import type { Tenant } from "../../../lib/mockData";
+import { getAllTenants, deleteTenant } from "../../../lib/db";
+import { useAuth } from "../../../lib/authService";
+import type { Tenant } from "../../../lib/types";
 
 const Tenants = () => {
   const router = useRouter();
+  const { user } = useAuth();
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchTenants = async () => {
     try {
       setLoading(true);
-      const data = await getAllTenants();
+      if (!user) return;
+      const data = await getAllTenants(user.$id);
       setTenants(data);
     } catch (error) {
       console.error("Failed to load tenants:", error);
@@ -24,7 +27,7 @@ const Tenants = () => {
 
   useEffect(() => {
     fetchTenants();
-  }, []);
+  }, [user]);
 
   const handleAddTenant = () => {
     router.push("/(tabs)/tenants/addTenant");
@@ -55,9 +58,8 @@ const Tenants = () => {
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteTenantFromMock(tenantId);
-              const updated = await getAllTenants();
-              setTenants(updated);
+              await deleteTenant(tenantId);
+              fetchTenants();
               Alert.alert("Deleted", "Tenant has been deleted.");
             } catch (error) {
               Alert.alert("Error", "Failed to delete tenant.");

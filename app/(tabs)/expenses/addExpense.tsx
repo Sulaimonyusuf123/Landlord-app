@@ -1,11 +1,21 @@
 // app/(tabs)/addExpense.tsx
 
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { getAllProperties, saveExpenseToMock } from "../../../lib/mockData";
-import type { Property, Unit } from "../../../lib/mockData";
+import { getAllProperties, createExpense } from "../../../lib/db";
+import { getCurrentUser } from "../../../lib/authService";
+import type { Property } from "../../../lib/types";
 
 const EXPENSE_TYPES = [
   "Electricity Bill",
@@ -19,59 +29,55 @@ const EXPENSE_TYPES = [
 
 const AddExpense = () => {
   const router = useRouter();
+  const [userId, setUserId] = useState<string>("");
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
-  const [units, setUnits] = useState<Unit[]>([]);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [expenseType, setExpenseType] = useState<string | null>(null);
-  const [amount, setAmount] = useState<string>('');
-  const [expenseDate, setExpenseDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [notes, setNotes] = useState<string>('');
+  const [amount, setAmount] = useState<string>("");
+  const [expenseDate, setExpenseDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [notes, setNotes] = useState<string>("");
   const [showExpenseOptions, setShowExpenseOptions] = useState(false);
   const [showPropertyOptions, setShowPropertyOptions] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProperties = async () => {
+    const fetchInitialData = async () => {
       try {
-        const data = await getAllProperties();
+        const user = await getCurrentUser();
+        if (!user) throw new Error("User not found");
+        setUserId(user.$id);
+
+        const data = await getAllProperties(user.$id);
         setProperties(data);
       } catch (error) {
         console.error("Failed to load properties:", error);
+        Alert.alert("Error", "Failed to load properties");
       } finally {
         setLoading(false);
       }
     };
-    fetchProperties();
+
+    fetchInitialData();
   }, []);
 
   const handleSaveExpense = async () => {
-    if (!expenseType) {
-      Alert.alert("Error", "Please select an expense type.");
-      return;
-    }
-    if (!selectedPropertyId) {
-      Alert.alert("Error", "Please select a property.");
-      return;
-    }
-    if (!amount || isNaN(Number(amount))) {
-      Alert.alert("Error", "Please enter a valid amount.");
-      return;
-    }
+    if (!expenseType) return Alert.alert("Error", "Please select an expense type.");
+    if (!selectedPropertyId) return Alert.alert("Error", "Please select a property.");
+    if (!amount || isNaN(Number(amount))) return Alert.alert("Error", "Please enter a valid amount.");
     if (!expenseDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      Alert.alert("Error", "Please enter a valid date in format YYYY-MM-DD.");
-      return;
+      return Alert.alert("Error", "Please enter a valid date in format YYYY-MM-DD.");
     }
 
     try {
-      await saveExpenseToMock({
-        id: Date.now().toString(),
+      await createExpense({
+        userId,
         propertyId: selectedPropertyId,
         unitId: selectedUnitId || undefined,
         amount: Number(amount),
-        expenseType: expenseType,
-        expenseDate: expenseDate,
-        notes: notes,
+        expenseType,
+        expenseDate,
+        notes,
       });
 
       Alert.alert("Success", "Expense saved successfully!");
@@ -83,7 +89,7 @@ const AddExpense = () => {
   };
 
   const handleDateInput = (text: string) => {
-    const cleaned = text.replace(/[^0-9-]/g, '');
+    const cleaned = text.replace(/[^0-9-]/g, "");
     setExpenseDate(cleaned);
   };
 
@@ -132,7 +138,7 @@ const AddExpense = () => {
         <Text style={styles.label}>Property</Text>
         <TouchableOpacity onPress={() => setShowPropertyOptions(!showPropertyOptions)} style={styles.dropdown}>
           <Text style={{ color: selectedPropertyId ? "#000" : "#aaa" }}>
-            {properties.find(p => p.id === selectedPropertyId)?.name || "Select Property"}
+            {properties.find((p) => p.id === selectedPropertyId)?.name || "Select Property"}
           </Text>
         </TouchableOpacity>
         {showPropertyOptions && (
@@ -142,11 +148,6 @@ const AddExpense = () => {
                 key={property.id}
                 onPress={() => {
                   setSelectedPropertyId(property.id);
-                  if (property.type === "building" && property.units) {
-                    setUnits(property.units);
-                  } else {
-                    setUnits([]);
-                  }
                   setShowPropertyOptions(false);
                 }}
                 style={styles.dropdownItem}
@@ -155,26 +156,6 @@ const AddExpense = () => {
               </TouchableOpacity>
             ))}
           </View>
-        )}
-
-        {units.length > 0 && (
-          <>
-            <Text style={styles.label}>Unit (Optional)</Text>
-            <View style={styles.dropdown}>
-              {units.map((unit) => (
-                <TouchableOpacity
-                  key={unit.id}
-                  onPress={() => setSelectedUnitId(unit.id)}
-                  style={[
-                    styles.dropdownItem,
-                    selectedUnitId === unit.id && { backgroundColor: "#dff8eb" },
-                  ]}
-                >
-                    <Text>Unit {unit.id}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
         )}
 
         <Text style={styles.label}>Amount (SAR)</Text>

@@ -1,14 +1,16 @@
-// app/(tabs)/unit-details.tsx
+// app/(tabs)/units/unit-details.tsx
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getUnitById, getTenantById, removeTenantFromUnit } from '../../../lib/mockData';
-import type { Unit, Tenant } from '../../../lib/mockData';
+import { getUnitById, getTenantById, removeTenantFromUnit } from '../../../lib/db';
+import { useAuth } from '../../../lib/authService';
+import type { Unit, Tenant } from '../../../lib/types';
 
 const UnitDetails = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { user } = useAuth();
   const propertyId = params.propertyId as string;
   const unitId = params.unitId as string;
 
@@ -19,11 +21,13 @@ const UnitDetails = () => {
   useEffect(() => {
     const loadUnitAndTenant = async () => {
       try {
-        const unitData = await getUnitById(propertyId, unitId);
+        if (!user) return;
+
+        const unitData = await getUnitById(unitId, user.$id);
         setUnit(unitData || null);
 
         if (unitData?.tenantId) {
-          const tenantData = await getTenantById(unitData.tenantId);
+          const tenantData = await getTenantById(unitData.tenantId, user.$id);
           setTenant(tenantData || null);
         }
       } catch (error) {
@@ -34,11 +38,10 @@ const UnitDetails = () => {
     };
 
     loadUnitAndTenant();
-  }, [propertyId, unitId]);
+  }, [propertyId, unitId, user]);
 
   const handleAddTenant = () => {
     router.push({ pathname: '/(tabs)/tenants/addTenant', params: { propertyId, unitId } });
-
   };
 
   const handleEditTenant = () => {
@@ -49,7 +52,9 @@ const UnitDetails = () => {
 
   const handleRemoveTenant = async () => {
     try {
-      await removeTenantFromUnit(propertyId, unitId);
+      if (!user) return;
+
+      await removeTenantFromUnit(unitId, user.$id);
       Alert.alert("Success", "Tenant removed successfully!");
       setTenant(null);
       setUnit(prev => prev ? { ...prev, status: 'vacant', tenantId: undefined, startDate: undefined } : prev);

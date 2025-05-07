@@ -2,20 +2,23 @@ import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { getAllProperties, deletePropertyFromMock } from "../../../lib/mockData";
-import type { Property } from "../../../lib/mockData";
+import { getAllProperties, deleteProperty } from "../../../lib/db";
+import { useAuth } from "../../../lib/authService";
+import type { Property } from "../../../lib/types";
 
 const Properties = () => {
   const router = useRouter();
+  const { user } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0); 
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchProperties = async () => {
       try {
+        if (!user) return;
         setLoading(true);
-        const data = await getAllProperties();
+        const data = await getAllProperties(user.$id);
         setProperties(data);
       } catch (error) {
         console.error("Failed to load properties:", error);
@@ -24,7 +27,7 @@ const Properties = () => {
       }
     };
     fetchProperties();
-  }, [refreshKey]);
+  }, [refreshKey, user]);
 
   const handleAddProperty = () => {
     router.push("/(tabs)/properties/addProperty");
@@ -59,8 +62,8 @@ const Properties = () => {
           style: "destructive",
           onPress: async () => {
             try {
-              await deletePropertyFromMock(propertyId);
-              setRefreshKey(prev => prev + 1); 
+              await deleteProperty(propertyId);
+              setRefreshKey(prev => prev + 1);
               Alert.alert("Deleted", "Property has been deleted.");
             } catch (error) {
               console.error("Failed to delete property:", error);

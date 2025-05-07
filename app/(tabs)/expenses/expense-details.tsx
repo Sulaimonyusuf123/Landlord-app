@@ -1,22 +1,25 @@
+// app/(tabs)/expenses/expenseDetails.tsx
+
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { getAllExpenses } from "../../../lib/mockData";
-import type { Expense } from "../../../lib/mockData";
+import { getExpenseById } from "../../../lib/db";
+import type { Expense } from "../../../lib/types";
 
 const ExpenseDetails = () => {
   const router = useRouter();
-  const { expenseId } = useLocalSearchParams();
+  const { expenseId } = useLocalSearchParams<{ expenseId: string }>();
   const [expense, setExpense] = useState<Expense | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchExpense = async () => {
       try {
-        const all = await getAllExpenses();
-        const found = all.find((e) => e.id === expenseId);
-        setExpense(found || null);
+        const result = await getExpenseById(expenseId!);
+        setExpense(result);
+      } catch (error) {
+        Alert.alert("Error", "Failed to load expense details.");
       } finally {
         setLoading(false);
       }
@@ -25,9 +28,10 @@ const ExpenseDetails = () => {
   }, [expenseId]);
 
   const handleEdit = () => {
+    if (!expense) return;
     router.push({
       pathname: "/(tabs)/expenses/editExpense",
-      params: { expenseId: expense?.id },
+      params: { expenseId: expense.id },
     });
   };
 

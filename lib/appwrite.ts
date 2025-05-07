@@ -10,7 +10,7 @@ const storage = new Storage(client);
 
 // Appwrite Database & Storage IDs
 const DATABASE_ID = '67f6a679000cfddabb05'; // landlord_DB
-const BUCKET_ID = '67fa77ef00297ab9936b';  
+const BUCKET_ID = '67fa77ef00297ab9936b';
 
 // Collection IDs 
 const COLLECTIONS = {

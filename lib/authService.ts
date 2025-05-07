@@ -2,6 +2,7 @@
 
 import { account, ID } from "./appwrite";
 import type { Models } from "appwrite";
+import { useEffect, useState } from "react";
 
 type VerificationResponse = {
   $id: string;
@@ -41,7 +42,7 @@ export async function loginUser({
   user: Models.User<Models.Preferences>;
   session: Models.Session;
 }> {
-  await account.deleteSession("current").catch(() => {});
+  await account.deleteSession("current").catch(() => { });
   const session = await account.createEmailPasswordSession(email, password);
   const user = await account.get();
   return { user, session };
@@ -70,4 +71,23 @@ export async function getCurrentUser(): Promise<Models.User<Models.Preferences> 
 
 export async function logoutUser(): Promise<void> {
   await account.deleteSession("current");
+}
+
+// ✅ HOOK: useAuth (to be used inside components)
+export function useAuth() {
+  const [user, setUser] = useState<Models.User<Models.Preferences> | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const currentUser = await account.get();
+        setUser(currentUser);
+      } catch {
+        setUser(null);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  return { user };
 }

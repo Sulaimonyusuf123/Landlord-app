@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { getAllExpenses, updateExpenseInMock } from "../../../lib/mockData";
-import type { Expense } from "../../../lib/mockData";
+import { getExpenseById, updateExpense } from "../../../lib/db";
 import { Ionicons } from "@expo/vector-icons";
+import type { Expense } from "../../../lib/types";
 
 const EditExpense = () => {
   const router = useRouter();
@@ -18,16 +18,18 @@ const EditExpense = () => {
 
   useEffect(() => {
     const fetchExpense = async () => {
-      const all = await getAllExpenses();
-      const found = all.find((e) => e.id === expenseId);
-      if (found) {
-        setExpense(found);
-        setExpenseType(found.expenseType);
-        setAmount(found.amount.toString());
-        setExpenseDate(found.expenseDate);
-        setNotes(found.notes || "");
+      try {
+        const result = await getExpenseById(expenseId as string);
+        setExpense(result);
+        setExpenseType(result.expenseType || "");
+        setAmount(result.amount.toString());
+        setExpenseDate(result.expenseDate || "");
+        setNotes(result.notes || "");
+      } catch (error) {
+        Alert.alert("Error", "Expense not found.");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchExpense();
   }, [expenseId]);
@@ -40,7 +42,7 @@ const EditExpense = () => {
     }
 
     try {
-      await updateExpenseInMock(expense.id, {
+      await updateExpense(expense.id, {
         expenseType,
         amount: parseFloat(amount),
         expenseDate,

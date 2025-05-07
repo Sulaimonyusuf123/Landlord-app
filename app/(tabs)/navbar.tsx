@@ -1,8 +1,11 @@
+// app/(tabs)/navbar.tsx
+
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { logoutUser } from "../../lib/appwrite";
+import { logoutUser } from "../../lib/authService";
+import { useAuth } from "../../lib/authService";
 
 interface NavbarProps {
   closeNav: () => void;
@@ -10,6 +13,7 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ closeNav }) => {
   const router = useRouter();
+  const { user } = useAuth();
 
   const handleCloseButton = () => {
     closeNav();
@@ -23,6 +27,8 @@ const Navbar: React.FC<NavbarProps> = ({ closeNav }) => {
       console.error("Failed to logout:", error);
     }
   };
+
+  if (!user) return null;
 
   return (
     <View style={styles.container}>

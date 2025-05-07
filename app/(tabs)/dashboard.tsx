@@ -1,16 +1,17 @@
 // app/(tabs)/dashboard.tsx
 
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Modal } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Modal, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import Navbar from "../(tabs)/navbar";
-import { getAllProperties, deletePropertyFromMock } from "../../lib/mockData";
-import type { Property } from "../../lib/mockData";
+import { getAllProperties, deleteProperty } from "../../lib/db";
+import { useAuth } from "../../lib/authService";
+import type { Property } from "../../lib/types";
 
 const Dashboard = () => {
   const router = useRouter();
+  const { user } = useAuth();
   const [navVisible, setNavVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [properties, setProperties] = useState<Property[]>([]);
@@ -18,37 +19,32 @@ const Dashboard = () => {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const images = {
-    addNew: require("../../assets/images/addnew.png"),
-    payReport: require("../../assets/images/payreport.png"),
-    addTenant: require("../../assets/images/addten.png"),
-    building: require("../../assets/images/build.png"),
+  const fetchData = async () => {
+    if (!user) return;
+    try {
+      const propertyData = await getAllProperties(user.$id);
+      setProperties(propertyData);
+    } catch (error) {
+      console.error("Error loading properties:", error);
+      Alert.alert("Error", "Failed to load properties");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const propertyData = await getAllProperties();
-        setProperties(propertyData);
-      } catch (error) {
-        console.error("Error loading properties:", error);
-        Alert.alert("Error", "Failed to load properties");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
   const refreshProperties = async () => {
+    if (!user) return;
     try {
-      const updatedProperties = await getAllProperties();
+      const updatedProperties = await getAllProperties(user.$id);
       setProperties(updatedProperties);
     } catch (error) {
       console.error("Error refreshing properties:", error);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, [user]);
 
   const closeNav = () => setNavVisible(false);
   const toggleNav = () => setNavVisible(!navVisible);
@@ -75,11 +71,8 @@ const Dashboard = () => {
     try {
       setDeleteLoading(true);
       setMenuVisible(false);
-
-      await deletePropertyFromMock(idToDelete);
-
+      await deleteProperty(idToDelete);
       await refreshProperties();
-
       Alert.alert("Success", "Property deleted successfully");
     } catch (error) {
       console.error("Error deleting property:", error);
@@ -119,151 +112,115 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#fff" }}>
         <ActivityIndicator size="large" color="#17b8a6" />
-        <Text style={styles.loadingText}>Loading dashboard...</Text>
+        <Text style={{ marginTop: 10, fontSize: 16, color: "#666" }}>Loading dashboard...</Text>
       </View>
     );
   }
-  return (
-    <View style={styles.mainContainer}>
-      {navVisible && <Navbar closeNav={closeNav} />}
 
-      {/* Delete loading overlay */}
+  return (
+    <View style={{ flex: 1, position: "relative" }}>
+      {navVisible && <Navbar closeNav={closeNav} />}
       {deleteLoading && (
-        <View style={styles.loadingOverlay}>
+        <View style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.8)', justifyContent: 'center',
+          alignItems: 'center', zIndex: 999
+        }}>
           <ActivityIndicator size="large" color="#17b8a6" />
-          <Text style={styles.loadingText}>Deleting property...</Text>
+          <Text style={{ marginTop: 10, fontSize: 16, color: "#666" }}>Deleting property...</Text>
         </View>
       )}
 
-      <ScrollView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
+      <ScrollView style={{ flex: 1, backgroundColor: "#fff" }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: "#17b8a6", padding: 15, marginBottom: 10 }}>
           <TouchableOpacity onPress={toggleNav}>
             <Ionicons name="menu" size={28} color="white" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Dashboard</Text>
-          <View style={styles.headerRight}>
-            <TouchableOpacity onPress={() => router.push("/(tabs)/notification")} style={styles.headerIcon}>
-              <Ionicons name="notifications-outline" size={24} color="white" />
-            </TouchableOpacity>
-          </View>
+          <Text style={{ fontSize: 18, color: "white", fontWeight: "bold" }}>Dashboard</Text>
+          <TouchableOpacity onPress={() => router.push("/(tabs)/notification")}>
+            <Ionicons name="notifications-outline" size={24} color="white" />
+          </TouchableOpacity>
         </View>
 
-        {/* Welcome Section */}
-        <View style={styles.welcomeContainer}>
-          <Text style={styles.welcomeText}>Welcome back!</Text>
+        <View style={{ padding: 15 }}>
+          <Text style={{ fontSize: 18, fontWeight: "bold" }}>Welcome back!</Text>
         </View>
 
-        {/* If no properties exist, show Add First Property */}
         {properties.length === 0 && (
-          <View style={styles.noProperties}>
-            <Text style={styles.noPropertiesText}>You don't have any properties yet.</Text>
-            <TouchableOpacity 
-              style={styles.addPropertyButton}
+          <View style={{ padding: 30, alignItems: "center", backgroundColor: "#f5f5f5", margin: 15, borderRadius: 10 }}>
+            <Text style={{ fontSize: 16, color: "#666", marginBottom: 15 }}>You don't have any properties yet.</Text>
+            <TouchableOpacity
+              style={{ backgroundColor: "#17b8a6", paddingVertical: 10, paddingHorizontal: 20, borderRadius: 8 }}
               onPress={() => router.push("/(tabs)/properties/addProperty")}
             >
-              <Text style={styles.addPropertyButtonText}>+ Add Your First Property</Text>
+              <Text style={{ color: "white", fontWeight: "bold", fontSize: 16 }}>+ Add Your First Property</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity 
-            style={styles.quickAction}
+        <View style={{ flexDirection: "row", justifyContent: "space-around", paddingVertical: 15, paddingHorizontal: 15 }}>
+          <TouchableOpacity
+            style={{ alignItems: "center", padding: 10, backgroundColor: "#f5f5f5", borderRadius: 10, width: 120 }}
             onPress={() => router.push("/(tabs)/payments/addPayment")}
           >
             <Ionicons name="cash-outline" size={28} color="#17b8a6" />
-            <Text style={styles.actionText}>Add Payment</Text>
+            <Text style={{ fontSize: 12, marginTop: 5, textAlign: "center" }}>Add Payment</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.quickAction}
+          <TouchableOpacity
+            style={{ alignItems: "center", padding: 10, backgroundColor: "#f5f5f5", borderRadius: 10, width: 120 }}
             onPress={() => router.push("/(tabs)/expenses/addExpense")}
           >
             <Ionicons name="receipt-outline" size={28} color="#17b8a6" />
-            <Text style={styles.actionText}>Add Expense</Text>
+            <Text style={{ fontSize: 12, marginTop: 5, textAlign: "center" }}>Add Expense</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Summary Cards */}
-        <View style={styles.summaryContainer}>
-          <View style={styles.summaryCard}>
-            <Text>Total Properties</Text>
-            <Text style={styles.count}>{properties.length}</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text>Total Units</Text>
-            <Text style={styles.count}>{totalUnits}</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text>Units Occupied</Text>
-            <Text style={styles.count}>{occupiedUnits}</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text>Units Vacant</Text>
-            <Text style={styles.count}>{vacantUnits}</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text>Total Income</Text>
-            <Text style={styles.count}>{totalIncome.toLocaleString()} SAR</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text>Total Expenses</Text>
-            <Text style={styles.count}>{totalExpenses.toLocaleString()} SAR</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text>Operating Costs</Text>
-            <Text style={styles.count}>{totalOperatingCosts.toLocaleString()} SAR</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text>Net Profit</Text>
-            <Text style={[styles.count, { color: netProfit >= 0 ? "#17b8a6" : "red" }]}>
-              {netProfit.toLocaleString()} SAR
-            </Text>
-          </View>
-        </View>
-        {/* Recent Activities */}
-        <Text style={styles.sectionTitle}>Recent Activity</Text>
-
-        {/* لو عندنا أنشطة نعرضها هنا */}
-        <View style={styles.activityContainer}>
-          {/* حاليا ماعندنا أنشطة حقيقية فنعرض رسالة افتراضية */}
-          <Text style={styles.noActivitiesText}>No recent activities yet.</Text>
+        <View style={{ paddingHorizontal: 15 }}>
+          {[
+            ["Total Properties", properties.length],
+            ["Total Units", totalUnits],
+            ["Units Occupied", occupiedUnits],
+            ["Units Vacant", vacantUnits],
+            ["Total Income", `${totalIncome.toLocaleString()} SAR`],
+            ["Total Expenses", `${totalExpenses.toLocaleString()} SAR`],
+            ["Operating Costs", `${totalOperatingCosts.toLocaleString()} SAR`],
+            ["Net Profit", `${netProfit.toLocaleString()} SAR`]
+          ].map(([label, value], i) => (
+            <View key={i} style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: "#dff8eb", padding: 15, marginVertical: 5, borderRadius: 10 }}>
+              <Text>{label}</Text>
+              <Text style={{ fontSize: 18, fontWeight: "bold", color: label === "Net Profit" ? (netProfit >= 0 ? "#17b8a6" : "red") : "#17b8a6" }}>{value}</Text>
+            </View>
+          ))}
         </View>
 
+        <Text style={{ fontSize: 18, fontWeight: "bold", marginTop: 15, marginBottom: 5, paddingHorizontal: 15 }}>Recent Activity</Text>
+
+        <View style={{ backgroundColor: "#f5f5f5", padding: 15, marginHorizontal: 15, marginTop: 10, borderRadius: 10 }}>
+          <Text style={{ fontSize: 14, color: "#666", textAlign: "center" }}>No recent activities yet.</Text>
+        </View>
       </ScrollView>
 
-      {/* Action menu modal (لو تحتاجه مستقبلا لحذف أو تعديل عقار) */}
-      <Modal
-        transparent={true}
-        animationType="fade"
-        visible={menuVisible}
-        onRequestClose={() => setMenuVisible(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
+      <Modal transparent animationType="fade" visible={menuVisible} onRequestClose={() => setMenuVisible(false)}>
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center' }}
           activeOpacity={1}
           onPress={() => setMenuVisible(false)}
         >
-          <View style={styles.menuContainer}>
-            <TouchableOpacity 
-              style={styles.menuItem} 
-              onPress={handleDeleteProperty}
-              activeOpacity={0.7}
-            >
+          <View style={{
+            width: '80%', backgroundColor: 'white', borderRadius: 10, overflow: 'hidden',
+            elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25, shadowRadius: 3.84
+          }}>
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }} onPress={handleDeleteProperty}>
               <Ionicons name="trash-outline" size={24} color="#ff4d4d" />
-              <Text style={styles.deleteText}>Delete Property</Text>
+              <Text style={{ marginLeft: 10, color: '#ff4d4d', fontWeight: '500', fontSize: 16 }}>Delete Property</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.menuItem} 
-              onPress={() => setMenuVisible(false)}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }} onPress={() => setMenuVisible(false)}>
               <Ionicons name="close-outline" size={24} color="#666" />
-              <Text style={styles.menuText}>Cancel</Text>
+              <Text style={{ marginLeft: 10, color: '#666', fontWeight: '500', fontSize: 16 }}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -271,13 +228,14 @@ const Dashboard = () => {
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
     position: "relative",
   },
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
     backgroundColor: "#fff"
   },
   loadingContainer: {
@@ -302,18 +260,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 999,
   },
-  header: { 
-    flexDirection: "row", 
-    justifyContent: "space-between", 
-    alignItems: "center", 
-    backgroundColor: "#17b8a6", 
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#17b8a6",
     padding: 15,
     marginBottom: 10
   },
-  headerTitle: { 
-    fontSize: 18, 
-    color: "white", 
-    fontWeight: "bold" 
+  headerTitle: {
+    fontSize: 18,
+    color: "white",
+    fontWeight: "bold"
   },
   headerRight: {
     flexDirection: "row",
@@ -322,24 +280,24 @@ const styles = StyleSheet.create({
   headerIcon: {
     marginLeft: 15,
   },
-  welcomeContainer: { 
-    padding: 15 
+  welcomeContainer: {
+    padding: 15
   },
-  welcomeText: { 
-    fontSize: 18, 
-    fontWeight: "bold" 
+  welcomeText: {
+    fontSize: 18,
+    fontWeight: "bold"
   },
-  quickActions: { 
-    flexDirection: "row", 
-    justifyContent: "space-around", 
+  quickActions: {
+    flexDirection: "row",
+    justifyContent: "space-around",
     paddingVertical: 15,
     paddingHorizontal: 15
   },
-  quickAction: { 
-    alignItems: "center", 
-    padding: 10, 
-    backgroundColor: "#f5f5f5", 
-    borderRadius: 10, 
+  quickAction: {
+    alignItems: "center",
+    padding: 10,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 10,
     width: 120,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -347,31 +305,31 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2
   },
-  actionText: { 
-    fontSize: 12, 
-    marginTop: 5, 
-    textAlign: "center" 
+  actionText: {
+    fontSize: 12,
+    marginTop: 5,
+    textAlign: "center"
   },
-  summaryContainer: { 
+  summaryContainer: {
     marginBottom: 10,
     paddingHorizontal: 15
   },
-  summaryCard: { 
-    flexDirection: "row", 
-    justifyContent: "space-between", 
-    backgroundColor: "#dff8eb", 
-    padding: 15, 
-    marginVertical: 5, 
-    borderRadius: 10 
+  summaryCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    backgroundColor: "#dff8eb",
+    padding: 15,
+    marginVertical: 5,
+    borderRadius: 10
   },
-  count: { 
-    fontSize: 18, 
-    fontWeight: "bold", 
-    color: "#17b8a6" 
+  count: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#17b8a6"
   },
-  sectionTitle: { 
-    fontSize: 18, 
-    fontWeight: "bold", 
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
     marginTop: 15,
     marginBottom: 5,
     paddingHorizontal: 15
@@ -449,6 +407,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
   }
 });
-
 export default Dashboard;
-

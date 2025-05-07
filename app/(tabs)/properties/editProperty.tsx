@@ -1,12 +1,11 @@
-// app/(tabs)/editProperty.tsx
-
 import React, { useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { TextInput, Button, Text, ActivityIndicator, Snackbar } from 'react-native-paper';
 import { useForm, Controller } from 'react-hook-form';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getPropertyById, updatePropertyInMock } from '../../../lib/mockData';
+import { getPropertyById, updateProperty } from '../../../lib/db';
+import { useAuth } from '../../../lib/authService';
 
 interface PropertyFormData {
   name: string;
@@ -19,6 +18,7 @@ interface PropertyFormData {
 const EditProperty = () => {
   const router = useRouter();
   const { propertyId } = useLocalSearchParams<{ propertyId: string }>();
+  const { user } = useAuth();
   const { control, handleSubmit, setValue, formState: { errors } } = useForm<PropertyFormData>();
   const [loading, setLoading] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
@@ -27,7 +27,8 @@ const EditProperty = () => {
   useEffect(() => {
     const loadProperty = async () => {
       try {
-        const property = await getPropertyById(propertyId!);
+        if (!user || !propertyId) return;
+        const property = await getPropertyById(propertyId, user.$id);
         if (property) {
           setValue('name', property.name);
           setValue('address', property.address || '');
@@ -39,24 +40,18 @@ const EditProperty = () => {
         console.error('Error loading property:', error);
       }
     };
-    if (propertyId) loadProperty();
-  }, [propertyId]);
+    loadProperty();
+  }, [propertyId, user]);
 
   const onSubmit = async (data: PropertyFormData) => {
     try {
       setLoading(true);
-
-      await updatePropertyInMock(propertyId!, {
-        ...data,
-      });
-
+      await updateProperty(propertyId!, data);
       setSnackbarMessage('Property updated successfully!');
       setSnackbarVisible(true);
-
       setTimeout(() => {
         router.replace('/(tabs)/properties/properties');
       }, 1000);
-
     } catch (error) {
       console.error('Failed to update property:', error);
       Alert.alert('Error', 'Failed to update property. Please try again.');
@@ -96,12 +91,7 @@ const EditProperty = () => {
           control={control}
           name="address"
           render={({ field: { onChange, value } }) => (
-            <TextInput
-              label="Address"
-              value={value}
-              onChangeText={onChange}
-              style={styles.input}
-            />
+            <TextInput label="Address" value={value} onChangeText={onChange} style={styles.input} />
           )}
         />
 
@@ -109,12 +99,7 @@ const EditProperty = () => {
           control={control}
           name="state"
           render={({ field: { onChange, value } }) => (
-            <TextInput
-              label="State"
-              value={value}
-              onChangeText={onChange}
-              style={styles.input}
-            />
+            <TextInput label="State" value={value} onChangeText={onChange} style={styles.input} />
           )}
         />
 
@@ -122,12 +107,7 @@ const EditProperty = () => {
           control={control}
           name="city"
           render={({ field: { onChange, value } }) => (
-            <TextInput
-              label="City"
-              value={value}
-              onChangeText={onChange}
-              style={styles.input}
-            />
+            <TextInput label="City" value={value} onChangeText={onChange} style={styles.input} />
           )}
         />
 
@@ -153,11 +133,7 @@ const EditProperty = () => {
           style={styles.button}
           disabled={loading}
         >
-          {loading ? (
-            <ActivityIndicator animating={true} color="white" />
-          ) : (
-            "Update"
-          )}
+          {loading ? <ActivityIndicator animating={true} color="white" /> : "Update"}
         </Button>
 
         <Snackbar
@@ -165,10 +141,7 @@ const EditProperty = () => {
           onDismiss={() => setSnackbarVisible(false)}
           duration={3000}
           style={styles.snackbar}
-          action={{
-            label: 'OK',
-            onPress: () => setSnackbarVisible(false),
-          }}
+          action={{ label: 'OK', onPress: () => setSnackbarVisible(false) }}
         >
           {snackbarMessage}
         </Snackbar>

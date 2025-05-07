@@ -1,14 +1,14 @@
-// app/(tabs)/addUnit.tsx
-
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { addUnitToProperty } from '../../../lib/mockData';
+import { createUnit } from '../../../lib/db'; // استبدال الموك داتا
+import { useAuth } from '../../../lib/authService';
 
 const AddUnit = () => {
   const router = useRouter();
   const { propertyId } = useLocalSearchParams<{ propertyId: string }>();
+  const { user } = useAuth();
 
   const [size, setSize] = useState('');
   const [bedrooms, setBedrooms] = useState('');
@@ -19,6 +19,11 @@ const AddUnit = () => {
   const [quantity, setQuantity] = useState('1');
 
   const handleSave = async () => {
+    if (!propertyId || !user?.$id) {
+      Alert.alert("Error", "Missing property or user information.");
+      return;
+    }
+
     if (!size || !bedrooms || !bathrooms || !rentAmount || !floorNumber || isNaN(Number(quantity))) {
       Alert.alert('Error', 'Please fill all required fields correctly.');
       return;
@@ -28,22 +33,17 @@ const AddUnit = () => {
       const numberOfUnits = Math.max(1, parseInt(quantity));
 
       for (let i = 0; i < numberOfUnits; i++) {
-        await addUnitToProperty(propertyId!, {
-          id: Date.now().toString() + '-' + i,
-          propertyId: propertyId!,
+        await createUnit({
+          propertyId,
+          userId: user.$id,
           size: Number(size),
           bedrooms: Number(bedrooms),
+          bathrooms: Number(bathrooms),
           rentAmount: Number(rentAmount),
-          status: 'vacant',
-          startDate: undefined,
-          tenantId: undefined,
-          payments: [],
           floorNumber: Number(floorNumber),
-          notes: notes.trim() !== '' ? notes : undefined,
-          bathrooms: 0,
-          unitNumber: ''
+          status: 'vacant',
+          notes: notes.trim() || '',
         });
-          
       }
 
       Alert.alert('Success', `${numberOfUnits} Unit(s) added successfully!`);
@@ -66,67 +66,25 @@ const AddUnit = () => {
 
       <View style={styles.formContainer}>
         <Text style={styles.label}>Size (m²)</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          value={size}
-          onChangeText={setSize}
-          placeholder="Enter size in square meters"
-        />
+        <TextInput style={styles.input} keyboardType="numeric" value={size} onChangeText={setSize} />
 
         <Text style={styles.label}>Bedrooms</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          value={bedrooms}
-          onChangeText={setBedrooms}
-          placeholder="Enter number of bedrooms"
-        />
+        <TextInput style={styles.input} keyboardType="numeric" value={bedrooms} onChangeText={setBedrooms} />
 
         <Text style={styles.label}>Bathrooms</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          value={bathrooms}
-          onChangeText={setBathrooms}
-          placeholder="Enter number of bathrooms"
-        />
+        <TextInput style={styles.input} keyboardType="numeric" value={bathrooms} onChangeText={setBathrooms} />
 
         <Text style={styles.label}>Rent Amount (SAR)</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          value={rentAmount}
-          onChangeText={setRentAmount}
-          placeholder="Enter rent amount"
-        />
+        <TextInput style={styles.input} keyboardType="numeric" value={rentAmount} onChangeText={setRentAmount} />
 
         <Text style={styles.label}>Floor Number</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          value={floorNumber}
-          onChangeText={setFloorNumber}
-          placeholder="Enter floor number"
-        />
+        <TextInput style={styles.input} keyboardType="numeric" value={floorNumber} onChangeText={setFloorNumber} />
 
         <Text style={styles.label}>Notes (Optional)</Text>
-        <TextInput
-          style={[styles.input, { height: 80 }]}
-          multiline
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Write any notes..."
-        />
+        <TextInput style={[styles.input, { height: 80 }]} multiline value={notes} onChangeText={setNotes} />
 
         <Text style={styles.label}>Number of Identical Units</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="numeric"
-          value={quantity}
-          onChangeText={setQuantity}
-          placeholder="1"
-        />
+        <TextInput style={styles.input} keyboardType="numeric" value={quantity} onChangeText={setQuantity} />
 
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save Unit(s)</Text>
@@ -139,10 +97,7 @@ const AddUnit = () => {
 export default AddUnit;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-  },
+  container: { flex: 1, backgroundColor: '#F5F7FA' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -150,20 +105,9 @@ const styles = StyleSheet.create({
     padding: 15,
     justifyContent: 'space-between',
   },
-  headerTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  formContainer: {
-    padding: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
+  headerTitle: { color: 'white', fontSize: 18, fontWeight: 'bold' },
+  formContainer: { padding: 20 },
+  label: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 5 },
   input: {
     backgroundColor: '#fff',
     borderWidth: 1,

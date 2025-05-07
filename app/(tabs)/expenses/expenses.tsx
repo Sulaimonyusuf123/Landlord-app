@@ -2,8 +2,9 @@ import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { getAllExpenses } from "../../../lib/mockData"; 
-import type { Expense } from "../../../lib/mockData";
+import { getAllExpenses } from "../../../lib/db";
+import { getCurrentUser } from "../../../lib/authService";
+import type { Expense } from "../../../lib/types";
 
 const Expenses = () => {
   const router = useRouter();
@@ -13,7 +14,12 @@ const Expenses = () => {
   useEffect(() => {
     const fetchExpenses = async () => {
       try {
-        const data = await getAllExpenses();
+        const user = await getCurrentUser();
+        if (!user) {
+          console.warn("No user found");
+          return;
+        }
+        const data = await getAllExpenses(user.$id);
         setExpenses(data);
       } catch (error) {
         console.error("Failed to load expenses:", error);
@@ -21,6 +27,7 @@ const Expenses = () => {
         setLoading(false);
       }
     };
+
     fetchExpenses();
   }, []);
 
@@ -57,10 +64,12 @@ const Expenses = () => {
               <View key={expense.id} style={styles.expenseCard}>
                 <TouchableOpacity
                   activeOpacity={0.85}
-                  onPress={() => router.push({
-                    pathname: "/(tabs)/expenses/expense-details",
-                    params: { expenseId: expense.id }
-                  })}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(tabs)/expenses/expense-details",
+                      params: { expenseId: expense.id },
+                    })
+                  }
                 >
                   <Text style={styles.expenseType}>{expense.expenseType}</Text>
                   <Text style={styles.amount}>{expense.amount.toLocaleString()} SAR</Text>
@@ -68,9 +77,7 @@ const Expenses = () => {
                     Property ID: {expense.propertyId} {expense.unitId ? `| Unit: ${expense.unitId}` : ""}
                   </Text>
                   <Text style={styles.details}>Date: {expense.expenseDate}</Text>
-                  {expense.notes && (
-                    <Text style={styles.details}>Notes: {expense.notes}</Text>
-                  )}
+                  {expense.notes && <Text style={styles.details}>Notes: {expense.notes}</Text>}
                 </TouchableOpacity>
                 <View style={styles.editButtonRow}>
                   <TouchableOpacity onPress={() => handleEditExpense(expense.id)}>

@@ -8,12 +8,15 @@ import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { savePropertyToMock } from "../../../lib/mockData";
+import { createProperty } from "../../../lib/db";
+import { useAuth } from "../../../lib/authService";
 
 const PROPERTY_TYPES = ["Building", "Villa", "Commercial"];
 
 const AddProperty = () => {
   const router = useRouter();
+  const { user } = useAuth();
+
   const {
     control,
     handleSubmit,
@@ -43,19 +46,22 @@ const AddProperty = () => {
   };
 
   const onSubmit = async (data: any) => {
+    if (!user) return;
+
     try {
-      const property = {
-        id: Date.now().toString(),
+      await createProperty({
         name: data.propertyName,
         type: data.propertyType.toLowerCase(),
         address: data.address || '',
         state: data.state || '',
         city: data.city || '',
         annualRent: data.annualRent ? Number(data.annualRent) : undefined,
+        floors: data.floors ? Number(data.floors) : undefined,
+        bedrooms: data.bedrooms ? Number(data.bedrooms) : undefined,
+        bathrooms: data.bathrooms ? Number(data.bathrooms) : undefined,
         imageUrl: image,
-        units: [],
-      };
-      await savePropertyToMock(property);
+        ownerId: user.$id,
+      });
 
       setSnackbarMessage("Property added successfully!");
       setSnackbarVisible(true);
@@ -66,6 +72,7 @@ const AddProperty = () => {
         router.replace("/(tabs)/properties/properties");
       }, 500);
     } catch (err) {
+      console.error(err);
       Alert.alert("Error", "Failed to save property.");
     }
   };
@@ -80,7 +87,6 @@ const AddProperty = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Property Name */}
         <Controller
           control={control}
           name="propertyName"
@@ -96,7 +102,6 @@ const AddProperty = () => {
           )}
         />
 
-        {/* Property Type */}
         <Controller
           control={control}
           name="propertyType"
@@ -150,101 +155,56 @@ const AddProperty = () => {
           )}
         />
 
-        {/* Address */}
         <Controller
           control={control}
           name="address"
           render={({ field: { onChange, value } }) => (
-            <TextInput
-              label="Address"
-              value={value}
-              onChangeText={onChange}
-              style={styles.input}
-            />
+            <TextInput label="Address" value={value} onChangeText={onChange} style={styles.input} />
           )}
         />
-
-        {/* State */}
         <Controller
           control={control}
           name="state"
           render={({ field: { onChange, value } }) => (
-            <TextInput
-              label="State"
-              value={value}
-              onChangeText={onChange}
-              style={styles.input}
-            />
+            <TextInput label="State" value={value} onChangeText={onChange} style={styles.input} />
           )}
         />
-
-        {/* City */}
         <Controller
           control={control}
           name="city"
           render={({ field: { onChange, value } }) => (
-            <TextInput
-              label="City"
-              value={value}
-              onChangeText={onChange}
-              style={styles.input}
-            />
+            <TextInput label="City" value={value} onChangeText={onChange} style={styles.input} />
           )}
         />
 
-        {/* Additional Fields */}
         {selectedType === "Villa" && (
           <>
             <Controller
               control={control}
               name="annualRent"
               render={({ field: { onChange, value } }) => (
-                <TextInput
-                  label="Annual Rent (SAR)"
-                  keyboardType="numeric"
-                  value={value}
-                  onChangeText={onChange}
-                  style={styles.input}
-                />
+                <TextInput label="Annual Rent (SAR)" keyboardType="numeric" value={value} onChangeText={onChange} style={styles.input} />
               )}
             />
             <Controller
               control={control}
               name="floors"
               render={({ field: { onChange, value } }) => (
-                <TextInput
-                  label="Number of Floors"
-                  keyboardType="numeric"
-                  value={value}
-                  onChangeText={onChange}
-                  style={styles.input}
-                />
+                <TextInput label="Number of Floors" keyboardType="numeric" value={value} onChangeText={onChange} style={styles.input} />
               )}
             />
             <Controller
               control={control}
               name="bedrooms"
               render={({ field: { onChange, value } }) => (
-                <TextInput
-                  label="Bedrooms"
-                  keyboardType="numeric"
-                  value={value}
-                  onChangeText={onChange}
-                  style={styles.input}
-                />
+                <TextInput label="Bedrooms" keyboardType="numeric" value={value} onChangeText={onChange} style={styles.input} />
               )}
             />
             <Controller
               control={control}
               name="bathrooms"
               render={({ field: { onChange, value } }) => (
-                <TextInput
-                  label="Bathrooms"
-                  keyboardType="numeric"
-                  value={value}
-                  onChangeText={onChange}
-                  style={styles.input}
-                />
+                <TextInput label="Bathrooms" keyboardType="numeric" value={value} onChangeText={onChange} style={styles.input} />
               )}
             />
           </>
@@ -255,18 +215,11 @@ const AddProperty = () => {
             control={control}
             name="annualRent"
             render={({ field: { onChange, value } }) => (
-              <TextInput
-                label="Annual Rent (SAR)"
-                keyboardType="numeric"
-                value={value}
-                onChangeText={onChange}
-                style={styles.input}
-              />
+              <TextInput label="Annual Rent (SAR)" keyboardType="numeric" value={value} onChangeText={onChange} style={styles.input} />
             )}
           />
         )}
 
-        {/* Image Picker */}
         <TouchableOpacity onPress={pickImage} style={styles.imagePicker}>
           {image ? (
             <Image source={{ uri: image }} style={styles.image} />
@@ -278,22 +231,11 @@ const AddProperty = () => {
           )}
         </TouchableOpacity>
 
-        {/* Save Button */}
-        <Button
-          mode="contained"
-          onPress={handleSubmit(onSubmit)}
-          style={styles.button}
-          contentStyle={{ paddingVertical: 5 }}
-        >
+        <Button mode="contained" onPress={handleSubmit(onSubmit)} style={styles.button} contentStyle={{ paddingVertical: 5 }}>
           Save Property
         </Button>
 
-        {/* Snackbar */}
-        <Snackbar
-          visible={snackbarVisible}
-          onDismiss={() => setSnackbarVisible(false)}
-          duration={3000}
-        >
+        <Snackbar visible={snackbarVisible} onDismiss={() => setSnackbarVisible(false)} duration={3000}>
           {snackbarMessage}
         </Snackbar>
       </ScrollView>
@@ -304,14 +246,8 @@ const AddProperty = () => {
 export default AddProperty;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F5F7FA",
-  },
-  scrollContainer: {
-    padding: 20,
-    paddingBottom: 40,
-  },
+  container: { flex: 1, backgroundColor: "#F5F7FA" },
+  scrollContainer: { padding: 20, paddingBottom: 40 },
   header: {
     backgroundColor: "#17b8a6",
     padding: 15,
@@ -323,20 +259,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 2,
   },
-  backButton: {
-    marginRight: 15,
-    padding: 5,
-  },
-  headerText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#ffffff",
-    flex: 1,
-  },
-  input: {
-    marginBottom: 10,
-    backgroundColor: "#FFFFFF",
-  },
+  backButton: { marginRight: 15, padding: 5 },
+  headerText: { fontSize: 20, fontWeight: "bold", color: "#ffffff", flex: 1 },
+  input: { marginBottom: 10, backgroundColor: "#FFFFFF" },
   imagePicker: {
     borderWidth: 1,
     borderColor: "#dff8eb",
@@ -348,13 +273,6 @@ const styles = StyleSheet.create({
     marginVertical: 15,
     minHeight: 150,
   },
-  image: {
-    width: "100%",
-    height: 200,
-    borderRadius: 5,
-  },
-  button: {
-    marginTop: 10,
-    backgroundColor: "#17b8a6",
-  },
+  image: { width: "100%", height: 200, borderRadius: 5 },
+  button: { marginTop: 10, backgroundColor: "#17b8a6" },
 });
