@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { registerUser } from "../../lib/appwrite";
+import { registerUser } from "../../lib/authService";
 
 const RegisterScreen = () => {
   const router = useRouter();
@@ -26,7 +26,6 @@ const RegisterScreen = () => {
     setErrorMessage("");
     setSuccessMessage("");
 
-    
     if (!email) {
       setErrorMessage("Please enter an email address.");
       return;
@@ -56,57 +55,20 @@ const RegisterScreen = () => {
     setIsLoading(true);
 
     try {
-      console.log("Starting registration process with:", { name, email, password: "****" });
-      const response = await registerUser({
-        name: name || undefined,
-        email: email.trim(),
-        password,
-      });
-
-      console.log("Registration response:", response);
-      const { user, verification, session } = response || {};
-
-      if (!user) {
-        throw new Error("User creation failed, no user returned.");
-      }
-
-      if (verification) {
-        setSuccessMessage("Verification link sent! Please check your email to verify your account.");
-        console.log("Verification sent successfully:", { user, verification });
-        setTimeout(() => router.replace("/(auth)/login"), 3000); 
+      await registerUser({ name, email, password });
+      setSuccessMessage("Verification link sent! Please check your email.");
+      setTimeout(() => router.replace("/(auth)/login"), 3000);
+    } catch (error: any) {
+      if (
+        error?.code === 409 ||
+        (error?.message && error.message.toLowerCase().includes("already"))
+      ) {
+        setErrorMessage("This email is already registered.");
       } else {
-        setSuccessMessage(
-          "Account created, but we couldn’t send the verification email. Please try logging in to request a new one."
-        );
-        console.log("Verification failed, but user created:", { user });
-        setTimeout(() => router.replace("/(auth)/login"), 3000); 
-      }
-    } catch (error) {
-      console.error("Registration error (FULL):", JSON.stringify(error, null, 2));
-      const errorDetails = error?.response ? JSON.stringify(error.response) : "No response details";
-      console.error("Error details:", errorDetails);
-
-      if (error?.code === 409 || 
-          (error?.message && (
-            error.message.includes("user with the same email already exists") ||
-            error.message.includes("email already exists") ||
-            error.message.includes("A user with the same email") ||
-            error.message.includes("already registered")
-          ))) {
-        setErrorMessage("This email is already registered. Please use a different email or sign in.");
-      } else if (error?.message && (
-          error.message.includes("Invalid email") || 
-          error.message.includes("email address")
-      )) {
-        setErrorMessage("Please enter a valid email address.");
-      } else if (error?.message) {
-        setErrorMessage(`Registration failed: ${error.message}`);
-      } else {
-        setErrorMessage("Registration failed. Please check the console for details.");
+        setErrorMessage(error?.message || "Registration failed.");
       }
     } finally {
       setIsLoading(false);
-      console.log("Signup attempt completed, isLoading:", false);
     }
   };
 
@@ -116,37 +78,29 @@ const RegisterScreen = () => {
         <Text style={styles.title}>Create Account</Text>
         <Text style={styles.subtitle}>Create an account to continue!</Text>
 
-        {successMessage ? (
+        {successMessage && (
           <View style={styles.successContainer}>
             <Text style={styles.successText}>{successMessage}</Text>
           </View>
-        ) : null}
-        {errorMessage ? (
+        )}
+        {errorMessage && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{errorMessage}</Text>
           </View>
-        ) : null}
+        )}
 
         <TextInput
           style={styles.input}
           placeholder="Name"
           value={name}
-          onChangeText={(text) => {
-            setName(text);
-            setErrorMessage("");
-            setSuccessMessage("");
-          }}
+          onChangeText={setName}
           editable={!isLoading}
         />
         <TextInput
           style={styles.input}
           placeholder="Email*"
           value={email}
-          onChangeText={(text) => {
-            setEmail(text);
-            setErrorMessage("");
-            setSuccessMessage("");
-          }}
+          onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
           editable={!isLoading}
@@ -155,11 +109,7 @@ const RegisterScreen = () => {
           style={styles.input}
           placeholder="Phone"
           value={phone}
-          onChangeText={(text) => {
-            setPhone(text);
-            setErrorMessage("");
-            setSuccessMessage("");
-          }}
+          onChangeText={setPhone}
           keyboardType="phone-pad"
           editable={!isLoading}
         />
@@ -167,11 +117,7 @@ const RegisterScreen = () => {
           style={styles.input}
           placeholder="Password* (min 8 characters)"
           value={password}
-          onChangeText={(text) => {
-            setPassword(text);
-            setErrorMessage("");
-            setSuccessMessage("");
-          }}
+          onChangeText={setPassword}
           secureTextEntry
           editable={!isLoading}
         />
@@ -179,11 +125,7 @@ const RegisterScreen = () => {
           style={styles.input}
           placeholder="Confirm password*"
           value={confirmPassword}
-          onChangeText={(text) => {
-            setConfirmPassword(text);
-            setErrorMessage("");
-            setSuccessMessage("");
-          }}
+          onChangeText={setConfirmPassword}
           secureTextEntry
           editable={!isLoading}
         />
@@ -213,9 +155,7 @@ const RegisterScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-  },
+  scrollContainer: { flexGrow: 1 },
   container: {
     flex: 1,
     justifyContent: "center",
@@ -223,16 +163,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8F9FA",
     padding: 20,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 20,
-  },
+  title: { fontSize: 22, fontWeight: "bold", marginBottom: 5 },
+  subtitle: { fontSize: 14, color: "#666", marginBottom: 20 },
   successContainer: {
     width: "100%",
     backgroundColor: "#E8F5E9",
@@ -242,11 +174,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 15,
   },
-  successText: {
-    color: "#00BFA6",
-    fontSize: 14,
-    textAlign: "center",
-  },
+  successText: { color: "#00BFA6", fontSize: 14, textAlign: "center" },
   errorContainer: {
     width: "100%",
     backgroundColor: "#FFE8E8",
@@ -256,11 +184,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 15,
   },
-  errorText: {
-    color: "#D32F2F",
-    fontSize: 14,
-    textAlign: "center",
-  },
+  errorText: { color: "#D32F2F", fontSize: 14, textAlign: "center" },
   input: {
     width: "100%",
     height: 50,
@@ -280,32 +204,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
-  buttonDisabled: {
-    backgroundColor: "#A0E6D9",
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  loadingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  signInContainer: {
-    flexDirection: "row",
-  },
-  signInText: {
-    fontSize: 14,
-    color: "#333",
-  },
-  signInLink: {
-    fontSize: 14,
-    color: "#00BFA6",
-    fontWeight: "bold",
-  },
+  buttonDisabled: { backgroundColor: "#A0E6D9", opacity: 0.7 },
+  buttonText: { color: "white", fontSize: 18, fontWeight: "bold" },
+  loadingContainer: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
+  signInContainer: { flexDirection: "row" },
+  signInText: { fontSize: 14, color: "#333" },
+  signInLink: { fontSize: 14, color: "#00BFA6", fontWeight: "bold" },
 });
 
 export default RegisterScreen;

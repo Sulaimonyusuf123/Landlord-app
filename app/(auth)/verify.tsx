@@ -1,21 +1,19 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { Text, View, ActivityIndicator, StyleSheet, TouchableOpacity } from "react-native";
-import { verifyEmail } from "../../lib/appwrite";
+import { verifyEmail } from "../../lib/authService";
 
 const VerifyScreen = () => {
   const router = useRouter();
-  console.log("useLocalSearchParams:", useLocalSearchParams);
   const params = useLocalSearchParams();
-  console.log("params:", params);
-  const userId = params.userId;
-  const secret = params.secret;
+
+  const userId = typeof params.userId === "string" ? params.userId : "";
+  const secret = typeof params.secret === "string" ? params.secret : "";
 
   const [isVerifying, setIsVerifying] = useState(true);
   const [verificationStatus, setVerificationStatus] = useState("");
 
   useEffect(() => {
-    console.log("VerifyScreen mounted with params:", { userId, secret });
     const performVerification = async () => {
       if (!userId || !secret) {
         setIsVerifying(false);
@@ -24,7 +22,6 @@ const VerifyScreen = () => {
       }
 
       try {
-        console.log("Starting email verification with userId:", userId, "secret:", secret);
         await verifyEmail(userId, secret);
         setVerificationStatus("Email verified successfully!");
         setTimeout(() => {
@@ -39,7 +36,7 @@ const VerifyScreen = () => {
     };
 
     performVerification();
-  }, [userId, secret, router]);
+  }, [userId, secret]);
 
   return (
     <View style={styles.container}>
@@ -67,7 +64,6 @@ const VerifyScreen = () => {
   );
 };
 
-// Styles unchanged
 const styles = StyleSheet.create({
   container: {
     flex: 1,

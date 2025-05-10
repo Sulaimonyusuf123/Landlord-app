@@ -1,42 +1,31 @@
 import React, { useState } from "react";
-import { View, ScrollView, Image, StyleSheet, TouchableOpacity, Alert } from "react-native";
-import { TextInput, Button, Text, ActivityIndicator, Snackbar } from "react-native-paper"; 
+import { View, ScrollView, StyleSheet, TouchableOpacity, Alert, Image } from "react-native";
+import { TextInput, Button, Text, ActivityIndicator, Snackbar } from "react-native-paper";
 import { useForm, Controller } from "react-hook-form";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { addTenant } from "../../lib/appwrite"; // Update this path to match your project structure
+import { createTenant } from "../../../lib/db";
+import { useAuth } from "../../../lib/authService";
+
+interface TenantFormData {
+  name: string;
+  email: string;
+  phone: string;
+  state?: string;
+  city?: string;
+}
 
 const AddTenant = () => {
-  const { control, handleSubmit, reset, formState: { errors } } = useForm();
-  const [image, setImage] = useState(null);
+  const router = useRouter();
+  const { user } = useAuth();
+  const { propertyId, unitId } = useLocalSearchParams<{ propertyId?: string, unitId?: string }>();
+
+  const { control, handleSubmit, reset, formState: { errors } } = useForm<TenantFormData>();
+  const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
-  const router = useRouter();
-
-  const onSubmit = async (data) => {
-    try {
-      setLoading(true);
-      // Call the addTenant function from your API
-      const result = await addTenant(data, image);
-      console.log("Tenant added successfully:", result);
-      
-      // Show success message with Snackbar
-      setSnackbarMessage("Tenant added successfully!");
-      setSnackbarVisible(true);
-      
-      // Reset form and image
-      reset();
-      setImage(null);
-      
-    } catch (error) {
-      console.error("Failed to add tenant:", error);
-      Alert.alert("Error", "Failed to add tenant. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -51,30 +40,69 @@ const AddTenant = () => {
     }
   };
 
+  const onSubmit = async (data: TenantFormData) => {
+    if (!propertyId || !unitId || !user?.$id) {
+      Alert.alert("Error", "Missing user, property or unit info.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const tenant = {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        state: data.state || '',
+        city: data.city || '',
+        imageUrl: image || undefined,
+        userId: user.$id,
+        propertyId,
+        unitId
+      };
+
+      await createTenant(tenant);
+
+      setSnackbarMessage("Tenant added successfully!");
+      setSnackbarVisible(true);
+      reset();
+      setImage(null);
+
+      setTimeout(() => {
+        router.replace("/(tabs)/properties/properties");
+      }, 1000);
+
+    } catch (error) {
+      console.error("Failed to add tenant:", error);
+      Alert.alert("Error", "Failed to add tenant. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={styles.container}>
-        {/* Back Button */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.replace("/(tabs)/dashboard")} style={{ marginRight: 10 }}>
+          <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 10 }}>
             <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerText}>Add Tenant</Text>
+          <View style={{ width: 24 }} />
         </View>
 
-        {/* Form Inputs */}
         <Controller
           control={control}
           name="name"
           defaultValue=""
           rules={{ required: "Name is required" }}
           render={({ field: { onChange, value } }) => (
-            <TextInput 
-              label="Name" 
-              value={value} 
-              onChangeText={onChange} 
+            <TextInput
+              label="Name"
+              value={value}
+              onChangeText={onChange}
               style={styles.input}
-              error={errors.name}
+              error={!!errors.name}
             />
           )}
         />
@@ -84,7 +112,7 @@ const AddTenant = () => {
           control={control}
           name="email"
           defaultValue=""
-          rules={{ 
+          rules={{
             required: "Email is required",
             pattern: {
               value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -92,12 +120,12 @@ const AddTenant = () => {
             }
           }}
           render={({ field: { onChange, value } }) => (
-            <TextInput 
-              label="Email" 
-              value={value} 
-              onChangeText={onChange} 
+            <TextInput
+              label="Email"
+              value={value}
+              onChangeText={onChange}
               style={styles.input}
-              error={errors.email}
+              error={!!errors.email}
             />
           )}
         />
@@ -109,13 +137,13 @@ const AddTenant = () => {
           defaultValue=""
           rules={{ required: "Phone number is required" }}
           render={({ field: { onChange, value } }) => (
-            <TextInput 
-              label="Phone" 
-              value={value} 
-              onChangeText={onChange} 
-              style={styles.input} 
+            <TextInput
+              label="Phone"
+              value={value}
+              onChangeText={onChange}
+              style={styles.input}
               keyboardType="phone-pad"
-              error={errors.phone}
+              error={!!errors.phone}
             />
           )}
         />
@@ -139,15 +167,13 @@ const AddTenant = () => {
           )}
         />
 
-        {/* Image Picker */}
         <TouchableOpacity onPress={pickImage} style={styles.imagePicker}>
           {image ? <Image source={{ uri: image }} style={styles.image} /> : <Text>+ Upload Image</Text>}
         </TouchableOpacity>
 
-        {/* Submit Button */}
-        <Button 
-          mode="contained" 
-          onPress={handleSubmit(onSubmit)} 
+        <Button
+          mode="contained"
+          onPress={handleSubmit(onSubmit)}
           style={styles.button}
           disabled={loading}
         >
@@ -157,8 +183,7 @@ const AddTenant = () => {
             "Submit"
           )}
         </Button>
-        
-        {/* Success Snackbar */}
+
         <Snackbar
           visible={snackbarVisible}
           onDismiss={() => setSnackbarVisible(false)}
@@ -180,7 +205,7 @@ export default AddTenant;
 
 const styles = StyleSheet.create({
   scrollContainer: {
-    paddingBottom: 20, // Ensure scrollable space
+    paddingBottom: 20,
   },
   container: {
     padding: 20,
@@ -195,6 +220,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderRadius: 5,
     marginBottom: 20,
+    justifyContent: 'space-between',
   },
   headerText: {
     color: 'white',
